@@ -1,0 +1,14 @@
+[
+    {
+        "target": "openvino_ubuntu",
+        "workload": "resnet50",
+        "params": {
+            "hardware": "cpu",
+            "precision": "int8",
+            "batch": 1,
+            "concurrency": 1,
+            "mode": "throughput",
+            "iterations": 1024
+        }
+    }
+]

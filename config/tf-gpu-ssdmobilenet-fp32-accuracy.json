@@ -1,0 +1,14 @@
+[
+    {
+        "target": "tensorflow",
+        "workload": "ssdmobilenet",
+        "params": {
+            "hardware": "gpu",
+            "precision": "fp32",
+            "batch": 1,
+            "concurrency": 1,
+            "mode": "accuracy",
+            "iterations": 1
+        }
+    }
+]

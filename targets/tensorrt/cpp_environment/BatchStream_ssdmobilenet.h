@@ -1,0 +1,253 @@
+#ifndef BATCH_STREAM_PPM_H
+#define BATCH_STREAM_PPM_H
+#include <vector>
+#include <assert.h>
+#include <algorithm>
+#include <iomanip>
+#include <fstream>
+#include <experimental/filesystem>
+#include "NvInfer.h"
+#include "common.h"
+#include <unistd.h>
+#define GetCurrentDir getcwd
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+std::string locateFile(const std::string& input);
+
+const char* INPUT_BLOB_NAME = "Input";
+
+static constexpr int INPUT_C=3;   
+static constexpr int INPUT_H=300;
+static constexpr int INPUT_W=300;
+
+//Just a structure to hold data. Much useful for batchsizes>1.
+template<int C, int H, int W>
+struct CharImage
+{
+   float buffer[C * H * W];
+};
+
+//Function to load an image from file using stb library.
+std::vector<uint8_t> loadImage_stb(const char *fn, int width, int height, int channels) 
+{
+    std::vector<uint8_t> m_Data;
+    
+    using StbImageDataPtr = std::unique_ptr<unsigned char, decltype(&stbi_image_free)>; //it is a smart pointer.
+    StbImageDataPtr stbData(stbi_load(fn, &width, &height, &channels, 3), &stbi_image_free);
+    int sizeInBytes = width * height * channels;
+    m_Data.resize(sizeInBytes);
+    memcpy(m_Data.data(), stbData.get(), sizeInBytes);
+    return m_Data;
+}
+
+//ToDo: move to a common header file for ssdmobilenet.
+/*
+inline int64_t volume(const nvinfer1::Dims& d)
+{
+    return std::accumulate(d.d, d.d + d.nbDims, 1, std::multiplies<int64_t>());
+}*/
+
+class BatchStream
+{
+public:
+    BatchStream(int batchSize, int maxBatches)
+        : mBatchSize(batchSize)
+        , mMaxBatches(maxBatches)
+    {
+        mDims = nvinfer1::DimsNCHW{batchSize, INPUT_C, INPUT_H, INPUT_W};
+        mImageSize = mDims.c() * mDims.h() * mDims.w();
+        mBatch.resize(mBatchSize * mImageSize, 0);
+        mLabels.resize(mBatchSize, 0);
+        mFileBatch.resize(mDims.n() * mImageSize, 0);
+        mFileLabels.resize(mDims.n(), 0);
+        reset(0);
+    }
+
+    void reset(int firstBatch)
+    {
+        mBatchCount = 0;
+        mFileCount = 0;
+        mFileBatchPos = mDims.n();
+        skip(firstBatch);
+    }
+
+    bool next()
+    {
+        if (mBatchCount == mMaxBatches)
+            return false;
+
+        for (int csize = 1, batchPos = 0; batchPos < mBatchSize; batchPos += csize, mFileBatchPos += csize)
+        {
+            assert(mFileBatchPos > 0 && mFileBatchPos <= mDims.n());
+            if (mFileBatchPos == mDims.n() && !update())
+                return false;
+
+            // copy the smaller of: elements left to fulfill the request, or elements left in the file buffer.
+            csize = std::min(mBatchSize - batchPos, mDims.n() - mFileBatchPos);
+            std::copy_n(getFileBatch() + mFileBatchPos * mImageSize, csize * mImageSize, getBatch() + batchPos * mImageSize);
+        }
+        mBatchCount++;
+        return true;
+    }
+
+    void skip(int skipCount)
+    {
+        if (mBatchSize >= mDims.n() && mBatchSize % mDims.n() == 0 && mFileBatchPos == mDims.n())
+        {
+            mFileCount += skipCount * mBatchSize / mDims.n();
+            return;
+        }
+
+        int x = mBatchCount;
+        for (int i = 0; i < skipCount; i++)
+            next();
+        mBatchCount = x;
+    }
+
+    float* getBatch() { return mBatch.data(); }
+    float* getLabels() { return mLabels.data(); }
+    int getBatchesRead() const { return mBatchCount; }
+    int getBatchSize() const { return mBatchSize; }
+    nvinfer1::DimsNCHW getDims() const { return mDims; }
+
+private:
+    float* getFileBatch() { return mFileBatch.data(); }
+    float* getFileLabels() { return mFileLabels.data(); }
+
+    bool update()
+    {
+        std::vector<std::string> fNames; //file names.
+
+        std::ifstream file(locateFile("COCO2017_list.txt"), std::ifstream::in);
+        printf("located list\n");
+        if (file)
+        {
+            std::cout << "Batch #" << mFileCount << "\n";
+            file.seekg(((mBatchCount * mBatchSize)) * 17);  //17 characters are there in every filename.
+        }
+        
+        //std::cout << "Current path is " << fs::current_path() << '\n';
+        char buff[500];
+        GetCurrentDir( buff, 500 );
+        std::string current_working_dir(buff);
+        std::cout<<"current path:"<<current_working_dir<<std::endl;
+
+        std::string ilsvrc_folder = current_working_dir + "/datasets/COCO2017/images/" ;
+
+        for (int i = 1; i <= mBatchSize; i++)
+        {
+            std::string sName;
+            std::getline(file, sName);
+            std::string full_name= ilsvrc_folder + sName;
+            std::cout << "Calibrating with file " << full_name << std::endl;
+            
+            fNames.emplace_back(full_name); //push_back
+        } //get filenames equal to batchsize.
+        mFileCount++;
+        
+        //charImage is data structure to hold data for 1 image. Now create vector of that data structure whoes length is equal to batchsize.
+	std::vector<CharImage<INPUT_C, INPUT_H, INPUT_W>> b_images(mBatchSize);
+        for (uint32_t i = 0; i < fNames.size(); ++i) //read each image and store 
+        {
+            std::vector<uint8_t> img=loadImage_stb(fNames[i].c_str(), 300, 300, 3); 
+            for(int j=0;j<3*300*300;j++)  //Mean subtraction
+              {  
+                 b_images[i].buffer[j]  =float(img[j]);
+              }
+        }
+        std::vector<float> data(volume(mDims));
+
+        long int volChl = mDims.h() * mDims.w();
+	
+         for (int i = 0, volImg = mDims.c() * mDims.h() * mDims.w(); i < mBatchSize; ++i)
+         {
+            for (int c = 0; c < mDims.c(); ++c)
+            {
+                for (int j = 0; j < volChl; ++j)
+                {
+                    data[i * volImg + c * volChl + j] = (2.0 / 255.0)* float(b_images[i].buffer[j * mDims.c() + c]) - 1.0; 
+                }//loop1
+            }//loop2
+          }//loop3
+
+        std::copy_n(data.data(), mDims.n() * mImageSize, getFileBatch());
+
+        mFileBatchPos = 0;
+        return true;
+    }
+
+    int mBatchSize{0};
+    int mMaxBatches{0};
+    int mBatchCount{0};
+
+    int mFileCount{0}, mFileBatchPos{0};
+    int mImageSize{0};
+
+    nvinfer1::DimsNCHW mDims;
+    std::vector<float> mBatch;
+    std::vector<float> mLabels;
+    std::vector<float> mFileBatch;
+    std::vector<float> mFileLabels;
+};
+
+class Int8EntropyCalibrator : public nvinfer1::IInt8EntropyCalibrator
+{
+public:
+    Int8EntropyCalibrator(BatchStream& stream, int firstBatch, std::string calibrationTableName, bool readCache = true)
+        : mStream(stream)
+        , mCalibrationTableName(std::move(calibrationTableName))
+        , mReadCache(readCache)
+    {
+        nvinfer1::DimsNCHW dims = mStream.getDims();
+        mInputCount = volume(dims);
+        CHECK(cudaMalloc(&mDeviceInput, mInputCount * sizeof(float)));
+        mStream.reset(firstBatch);
+    }
+
+    virtual ~Int8EntropyCalibrator()
+    {
+        CHECK(cudaFree(mDeviceInput));
+    }
+
+    int getBatchSize() const override { return mStream.getBatchSize(); }
+
+    bool getBatch(void* bindings[], const char* names[], int nbBindings) override
+    {
+        if (!mStream.next())
+            return false;
+
+        CHECK(cudaMemcpy(mDeviceInput, mStream.getBatch(), mInputCount * sizeof(float), cudaMemcpyHostToDevice));
+        assert(!strcmp(names[0], INPUT_BLOB_NAME));
+        bindings[0] = mDeviceInput;
+        return true;
+    }
+
+    const void* readCalibrationCache(size_t& length) override
+    {
+        mCalibrationCache.clear();
+        std::ifstream input(mCalibrationTableName, std::ios::binary);
+        input >> std::noskipws;
+        if (mReadCache && input.good())
+            std::copy(std::istream_iterator<char>(input), std::istream_iterator<char>(), std::back_inserter(mCalibrationCache));
+        length = mCalibrationCache.size();
+        return length ? mCalibrationCache.data() : nullptr;
+    }
+
+    void writeCalibrationCache(const void* cache, size_t length) override
+    {
+        std::ofstream output(mCalibrationTableName, std::ios::binary);
+        output.write(reinterpret_cast<const char*>(cache), length);
+    }
+
+private:
+    BatchStream mStream;
+    std::string mCalibrationTableName;
+    bool mReadCache{true};
+
+    size_t mInputCount;
+    void* mDeviceInput{nullptr};
+    std::vector<char> mCalibrationCache;
+};
+#endif
