@@ -1,7 +1,7 @@
 
 # Introduction
 
-The EEMBC® MLMark&trade; benchmark is a machine-learning (ML) benchmark designed to measure the performance and accuracy of embedded inference. It was developed by a team at [EEMBC](http://www.eembc.org), which is a non-profit consortium founded in 1997 that produces benchmarks for embedded devices. The motivation for developing this benchmark grew from the lack of standardization of the environment required for analyzing ML performance. Most of the challenges the team faced were about how to sufficiently define the boundaries of an environment to ensure adequate reliability, flexibility, and confidence in the results. Further, the source-code implementations are provided here to help demystify exactly what the environment looks like at this point in time, as it is rapidly evolving. MLMark will continue to grow the database of supported target platforms and workloads over time.
+The EEMBC® MLMark&trade; benchmark is a machine-learning (ML) benchmark designed to measure the performance and accuracy of embedded inference. It was developed by a team at [EEMBC](http://www.eembc.org), which is a non-profit consortium founded in 1997 that produces benchmarks for embedded devices. Engineers from Intel, Ignitarium, NVIDIA, Texas Instruments, Arm and more participated in its development. The motivation for creating this benchmark grew from the lack of standardization of the environment required for analyzing ML performance. Most of the challenges the team faced were about how to sufficiently define the boundaries of an environment to ensure adequate reliability, flexibility, and confidence in the results. Further, the source-code implementations are provided here to help demystify exactly what the environment looks like at this point in time, as it is rapidly evolving. MLMark will continue to grow the database of supported target platforms and workloads over time.
 
 The MLMark benchmark adopts the following philosophy:
 
@@ -25,7 +25,7 @@ There are many, many variables that impact ML performance, with the neural-net g
 
 Publishing the implementations not only ensures transparency, but also helps educate people working with performance analysis. Many embedded engineers with decades experience are being asked to tackle this new technology, and the learning curve is steep. By consolidating models and code for multiple targets, and by keeping the implementations as simple as possible, MLMark provides broad insight into the nuts-and-bolts of inference across different SDKs.
 
-More information can be found on the [MLMark website](www.eembc.org/mlmark).
+More information can be found on the [MLMark website](https://www.eembc.org/mlmark).
 
 # Installation
 
@@ -260,7 +260,7 @@ All floating-point results are reported with three significant figures (not fixe
 
 # Submitting Scores
 
-Scores may be submitted to the database from the [MLMark Score Submission](www.eembc.org/mlmark/submit.php) page. Scores are reviewed for errors or pecularities, and follow up may be required before the scores are published to the live database.
+Scores may be submitted to the database from the [MLMark Score Submission](https://www.eembc.org/mlmark/submit.php) page. Scores are reviewed for errors or pecularities, and follow up may be required before the scores are published to the live database.
 
 # Run Rules
 
