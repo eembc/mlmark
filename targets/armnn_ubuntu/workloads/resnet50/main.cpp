@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * Copyright (C) 2019 EEMBC(R). All Rights Reserved
  * 
@@ -13,31 +12,6 @@
  * Original Author: Peter Torelli
  *
  */
-=======
-/*
-
-$ /usr/bin/c++ \
-        -fPIC \
-        -std=c++14 \
-        main.cpp \
-        -I ~/armnn/include \
-        -I ~/boost_1_64_0/install/include \
-        -I ~/opencv/modules/imgcodecs/include \
-        -I ~/opencv/modules/core/include \
-        -I ~/opencv/build \
-        -I ~/opencv/modules/imgproc/include \
-        -L ~/armnn/build \
-        -L ~/opencv/build/lib \
-        -larmnn \
-        -larmnnTfParser \
-        -lopencv_core \
-        -lopencv_imgcodecs \
-        -lopencv_imgproc \
-        ~/boost_1_64_0/install/lib/libboost_filesystem.a \
-        ~/boost_1_64_0/install/lib/libboost_system.a \
-        -o resnet50.exe
-*/
->>>>>>> origin/master
 
 // ArmNN
 #include <armnn/ArmNN.hpp>
@@ -119,7 +93,6 @@ std::vector<float> loadImage(string &fn) {
   return data;
 }
 
-<<<<<<< HEAD
 void
 runBatchInference(vector<string>& filenames)
 {
@@ -185,80 +158,6 @@ runBatchInference(vector<string>& filenames)
 		armnn::Optional<std::vector<std::string> &>(errorMessages)
 		); 
 	LogErrorMessages(errorMessages);
-=======
-void runBatchInference(vector<string> &filenames) {
-  // TODO: Placeholder
-  const int imgSize(224 * 224 * 3);
-  /* TODO understand batching
-  float *imgData = new float[imgSize * filenames.size()];
-  size_t x(0);
-  for (auto fn : filenames) {
-          if (g_debug) {
-                  cout << "Loading: " << fn << "..." << endl;
-          }
-          // TODO: Shape...
-          vector<uint8_t> bytes = loadImage(fn, 224, 224, 3);
-          for (auto i : boost::irange(0, imgSize)) {
-                  imgData[x] = (float)bytes[i] / 128.0 - 1.0;
-                  ++x;
-          }
-  }
-  */
-  vector<float> imgData;
-  // TODO Seeing some strange errors depending where this is allocated
-  // TODO Manifests as all 1,001 categories = -nan
-  float *d = new float[imgSize];
-
-  // Load the model
-  armnnTfParser::ITfParserPtr parser = armnnTfParser::ITfParser::Create();
-  armnn::INetworkPtr network = parser->CreateNetworkFromBinaryFile(
-      g_model_filename.c_str(), {{"input", {1, 224, 224, 3}}},
-      {"resnet_v1_50/SpatialSqueeze"});
-  // Bind the tensors
-  armnnTfParser::BindingPointInfo inputBindingInfo =
-      parser->GetNetworkInputBindingInfo("input");
-  armnnTfParser::BindingPointInfo outputBindingInfo =
-      parser->GetNetworkOutputBindingInfo("resnet_v1_50/SpatialSqueeze");
-  // Optimize the model
-  armnn::IRuntime::CreationOptions options;
-  // is this causing always-on gpu? options.m_EnableGpuProfiling = true;
-  armnn::IRuntimePtr runtime = armnn::IRuntime::Create(options);
-  /*
-
-          // NOTE: In this specific case profiling has to be enabled on the
-     command queue
-          // in order for the CLTuner to work.
-          bool profilingNeededForClTuner = useTunedParameters &&
-     m_clTunedParameters && m_clTunedParameters->m_Mode ==
-     IGpuAccTunedParameters::Mode::UpdateTunedParameters;
-
-          if (m_ProfilingEnabled || profilingNeededForClTuner)
-          {
-
-  */
-  std::vector<std::string> errorMessages;
-  armnn::OptimizerOptions oopts;
-  if (g_precision == "fp16") {
-    cout << "Enabling fp16 optimization" << endl;
-    oopts.m_ReduceFp32ToFp16 = true;
-  } else {
-    cout << "Disabling fp16 optimization (using fp32)" << endl;
-    oopts.m_ReduceFp32ToFp16 = false;
-  }
-  armnn::Compute hardware;
-  if (g_hardware == "gpu") {
-    cout << "Enabling GpuAcc (mali/opencl)" << endl;
-    hardware = armnn::Compute::GpuAcc;
-  } else {
-    cout << "Enabling CpuAcc" << endl;
-    hardware = armnn::Compute::CpuAcc;
-  }
-  cout << "Compute device: " << hardware << endl;
-  armnn::IOptimizedNetworkPtr optNet = armnn::Optimize(
-      *network, {hardware}, runtime->GetDeviceSpec(), oopts,
-      armnn::Optional<std::vector<std::string> &>(errorMessages));
-  LogErrorMessages(errorMessages);
->>>>>>> origin/master
 
   armnn::NetworkId networkIdentifier;
   runtime->LoadNetwork(networkIdentifier, move(optNet));
@@ -266,7 +165,6 @@ void runBatchInference(vector<string> &filenames) {
   // TODO What about batch size?
   vector<float> output(1000);
 
-<<<<<<< HEAD
 	chrono::time_point<chrono::high_resolution_clock> t0, t_start;
 	chrono::time_point<chrono::high_resolution_clock> tn, t_stop;
 	double dt;
@@ -355,109 +253,12 @@ main(int argc, char *argv[]) {
 	}
 	string input_json_filename = argv[1];
 	string output_json_filename = argv[2];
-=======
-  chrono::time_point<chrono::high_resolution_clock> t0;
-  chrono::time_point<chrono::high_resolution_clock> tn;
-
-  if (g_mode == "latency") {
-    // TODO: Batch
-    imgData = loadImage(filenames[0]);
-    // TODO: Passing imgData.data() is causing failures. Why?
-    memcpy(d, imgData.data(), imgData.size() * sizeof(float));
-    vector<double> times;
-    boost::property_tree::ptree latencies_node;
-    for (auto i : boost::irange(0, g_iterations)) {
-      boost::property_tree::ptree latency_node;
-      t0 = chrono::high_resolution_clock::now();
-      armnn::Status ret = runtime->EnqueueWorkload(
-          networkIdentifier, MakeInputTensors(inputBindingInfo, d),
-          MakeOutputTensors(outputBindingInfo, &output[0]));
-      tn = chrono::high_resolution_clock::now();
-      double dt = chrono::duration<double>(tn - t0).count();
-      if (g_debug) {
-        cout << boost::format("%f sec") % dt << endl;
-      }
-      times.push_back(dt);
-      latency_node.put("", dt);
-      latencies_node.push_back(make_pair("", latency_node));
-    }
-    // TODO: Seems the writer does not like ECMAScript, requires an object
-    g_results_tree.add_child("times", latencies_node);
-  } else if (g_mode == "throughput") {
-    // TODO: Batch
-    imgData = loadImage(filenames[0]);
-    // TODO: Passing imgData.data() is causing failures. Why?
-    memcpy(d, imgData.data(), imgData.size() * sizeof(float));
-    // Warmup
-    armnn::Status ret = runtime->EnqueueWorkload(
-        networkIdentifier, MakeInputTensors(inputBindingInfo, d),
-        MakeOutputTensors(outputBindingInfo, &output[0]));
-    t0 = chrono::high_resolution_clock::now();
-    for (auto i : boost::irange(0, g_iterations)) {
-      armnn::Status ret = runtime->EnqueueWorkload(
-          networkIdentifier, MakeInputTensors(inputBindingInfo, imgData.data()),
-          MakeOutputTensors(outputBindingInfo, &output[0]));
-    }
-    tn = chrono::high_resolution_clock::now();
-    double dt = chrono::duration<double>(tn - t0).count();
-    // TODO: Seems the writer does not like ECMAScript, requires an object
-    boost::property_tree::ptree time_node, times_node;
-    time_node.put("", dt);
-    times_node.push_back(make_pair("", time_node));
-    g_results_tree.add_child("times", times_node);
-  } else if (g_mode == "accuracy") {
-    boost::property_tree::ptree final_list_node;
-    for (auto i :
-         boost::irange(0, boost::numeric_cast<int>(filenames.size()))) {
-      vector<float> imgData = loadImage(filenames[i]);
-      // TODO: Passing imgData.data() is causing failures. Why?
-      memcpy(d, imgData.data(), imgData.size() * sizeof(float));
-      armnn::Status ret = runtime->EnqueueWorkload(
-          networkIdentifier, MakeInputTensors(inputBindingInfo, d),
-          MakeOutputTensors(outputBindingInfo, &output[0]));
-      map<float, int> results = maxSort(output);
-      // Save top-5
-      boost::property_tree::ptree prediction_node;
-      boost::property_tree::ptree prediction_list_node;
-      auto it = results.rbegin();
-      for (int j = 0; j < 5 && it != results.rend(); ++j) {
-        // Make an anonymous array of anonymous predictions (aka a list)
-        prediction_node.put("", it->second);
-        prediction_list_node.push_back(make_pair("", prediction_node));
-        if (g_debug) {
-          cout << filenames[i] << ": Top " << (j + 1) << " is " << (it->second)
-               << " with conf " << 100.0 * (it->first) << "%" << endl;
-        }
-        ++it;
-      }
-      // Now make a two-element list [filename, [predictions]]
-      boost::property_tree::ptree filename_node;
-      filename_node.put("", filenames[i]);
-      boost::property_tree::ptree file_predictions_node;
-      file_predictions_node.push_back(make_pair("", filename_node));
-      file_predictions_node.push_back(make_pair("", prediction_list_node));
-      // Now push this two-element list onto the final list
-      final_list_node.push_back(make_pair("", file_predictions_node));
-    }
-    g_results_tree.add_child("predictions", final_list_node);
-  }
-}
-
-int main(int argc, char *argv[]) {
-  if (argc < 3) {
-    cerr << "Arguments: <input JSON> <output JSON>" << endl;
-    return 1;
-  }
-  string input_json_filename = argv[1];
-  string output_json_filename = argv[2];
->>>>>>> origin/master
 
   // undocumented
   if (argc == 4) {
     g_debug = argv[3][0] == '0' ? 0 : 1;
   }
 
-<<<<<<< HEAD
 	try {
 		vector<string> filenames;
 		boost::property_tree::ptree root;
@@ -488,34 +289,5 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	return 0;
-=======
-  try {
-    vector<string> filenames;
-    boost::property_tree::ptree root;
-    boost::property_tree::read_json(input_json_filename, root);
-    if (g_debug) {
-      boost::property_tree::write_json(cout, root);
-    }
-    for (const auto &file : root.get_child("images")) {
-      filenames.push_back(file.second.data());
-    }
-    g_model_filename = root.get<string>("model");
-    g_iterations = root.get<int>("params.iterations", 1);
-    g_batch_size = root.get<int>("params.batch", 1);
-    g_hardware = root.get<string>("params.hardware", "cpu");
-    g_precision = root.get<string>("params.precision", "fp32");
-    g_mode = root.get<string>("params.mode", "latency");
-    runBatchInference(filenames);
-    boost::property_tree::write_json(output_json_filename, g_results_tree);
-    if (g_debug) {
-      boost::property_tree::write_json(cout, g_results_tree);
-      cout << "Output written to " << output_json_filename << endl;
-    }
-  } catch (const runtime_error &e) {
-    cerr << e.what() << endl;
-    return 1;
-  }
-  return 0;
->>>>>>> origin/master
 }
 
