@@ -30,6 +30,7 @@ class MobileNet:
         #load library. Initilaize Mobilenet class.
         mobilenet_lib=os.path.join(TRT_DIR,"cpp_environment","libs","libclass_mobilenet.so")
         self.lib = cdll.LoadLibrary(mobilenet_lib)
+        self.lib.return_object.restype = ctypes.c_ulonglong
         self.obj = self.lib.return_object()
         if precision == "int8" :
             engine_file_name = "Mobilenet_int8_"

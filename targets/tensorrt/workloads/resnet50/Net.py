@@ -31,6 +31,7 @@ class ResNet50:
 		#load library. Initilaize Mobilenet class.
 		resnetnet_lib=os.path.join(TRT_DIR,"cpp_environment","libs","libclass_resnet50.so")
 		self.lib = cdll.LoadLibrary(resnetnet_lib)
+		self.lib.return_object.restype = ctypes.c_ulonglong
 		self.obj = self.lib.return_object()
 		if precision == "int8" :
 			engine_file_name = "Resnet50_int8_"
