@@ -122,7 +122,7 @@ public:
 
     parser->registerInput(
         "input", nvinfer1::DimsCHW(3, 224, 224),
-        nvuffparser::UffInputOrder::kNHWC); // input for frozen_model.
+        nvuffparser::UffInputOrder::kNCHW); // input for frozen_model.
     parser->registerOutput(
         "MobilenetV1/Predictions/Reshape_1"); // Name of output layer.
 

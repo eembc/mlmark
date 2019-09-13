@@ -118,7 +118,7 @@ public:
 
     parser->registerInput(
         "input", nvinfer1::DimsCHW(3, 224, 224),
-        nvuffparser::UffInputOrder::kNHWC); // input for frozen_model.
+        nvuffparser::UffInputOrder::kNCHW); // input for frozen_model.
     parser->registerOutput("resnet_v1_50/SpatialSqueeze"); // Name of output
 
     if (!parser->parse(modelFile.c_str(), *network,
