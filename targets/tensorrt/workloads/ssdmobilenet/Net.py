@@ -31,6 +31,7 @@ class SsdMobilenet:
         #load library. Initilaize Mobilenet class.
         ssdmobilenet_lib=os.path.join(TRT_DIR,"cpp_environment","libs","libclass_ssdmobilenet.so")
         self.lib = cdll.LoadLibrary(ssdmobilenet_lib)
+        self.lib.return_object.restype = ctypes.c_ulonglong
         self.obj = self.lib.return_object()
         if precision == "int8" :
             engine_file_name = "SSDMobilenet_int8_"
