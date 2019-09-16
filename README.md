@@ -99,7 +99,7 @@ NOTE #2: Not all Arm installations have an OpenCV wheel available via Pip. For t
 $ sudo apt install python3-opencv
 ~~~
 
-The Ubuntu package is called `python3-opencv` and not `opencv-python`.  If the Ubuntu package does not exist, you will need to compile your own Python version of OpenCV, simply follow these [instructions](https://docs.opencv.org/4.1.0/d2/de6/tutorial_py_setup_in_ubuntu.html).
+The Ubuntu package is called `python3-opencv` and not `opencv-python`.  If the Ubuntu package does not exist, you will need to compile your own Python version of OpenCV, simply follow these [instructions](https://docs.opencv.org/4.1.0/d2/de6/tutorial_py_setup_in_ubuntu.html), and don't forget to install the `python3-dev` system package first.
 
 **Target-Specific Packages**
 
