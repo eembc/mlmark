@@ -116,6 +116,9 @@ A1. The board may be throttling. See above notes on governors.
 Q2. Cannot find OpenCL device when selecting `gpu`
 A2. Some OpenCL setups require root access, e.g. `sudo harnes/mlmark.py ...`
 
+Q3. Scores on the HiKey970 do not match published scores, even after using the speed configuration and taskset?
+A3. The default HiKey970 board does not have sufficient cooling; an external fan is required to achieve the reported scores.
+
 ## Notes
 
 1. Batching is currently not supported by ArmNN 19.02. When this changes in the future, the target will be released.
