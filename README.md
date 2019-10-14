@@ -16,6 +16,7 @@ Rather than setting rules and allowing individuals to perform optimizations in a
 	* Intel® CPUs, GPUs and neural compute sticks using OpenVINO®
 	* NVIDIA® GPUs using TensorRT
 	* Arm® Cortex®-A CPUs and Arm Mali™ family of GPUs using Neon™ technology and OpenCL™, respectively.
+	* Google Edge TPU using TensorFlow Lite
 
 3. Select Specific Models
 	
