@@ -20,7 +20,7 @@ Requirements can be found at the official Coral page for the [USB accelerator](h
 Image pre-processing is done with Python OpenCV, which means OpenCV must be installed. For the USB accelerator, most systems can install Python OpenCV as follows:
 
 ~~~
-$ python -m pip install opencv-python --user --upgrade
+$ pip3 install opencv-python --user --upgrade
 ~~~
 
 However, OpenCV is not installed by default on the Coral board OS image. Instructions are provided below.
@@ -48,7 +48,6 @@ Install the standard build prerequisites (including Python3 development, otherwi
 % sudo apt-get install libgtk-3-dev
 % sudo apt-get install libatlas-base-dev gfortran
 % sudo apt-get install python3-dev
-% pip3 install numpy
 ~~~
 Working from the MicroSD card partition, download OpenCV source:
 ~~~
@@ -78,12 +77,17 @@ Then issue this CMake command:
 ~~~
 Now run make: 
 ~~~
-% make -j3
+% make
 ~~~
 It should take approx 3-3.5 hours. When complete, install as `sudo`:
 ~~~
 % sudo make install
 % sudo ldconfig
+~~~
+For some reason the installer does not properly link the library, so do it manually:
+~~~
+% cd /usr/local/lib/python3.5/dist-packages
+% sudo ln -s /usr/local/python/cv2/python-3.5/cv2.cpython-35m-aarch64-linux-gnu.so cv2.so
 ~~~
 And test that the Python library was installed:
 ~~~
@@ -92,6 +96,7 @@ And test that the Python library was installed:
 >>> cv2.__version__  
 '4.0.0'  
 ~~~
+
 
 # Model Conversion
 The "golden" MLMark Tensorflow models provided in this benchmark were converted from Tensorflow to TensorflowLite, and then quantized post-training using PTIQ on 200 images from the relevant data set. Refer to the `utility` scripts in the `tensorflow_lite` target for details on how this was performed. The models were then compiled for the Edge TPU using the Google TPU flow. If the TFLite models are not compiled using the Google flow, the TFLite will run on the host CPU, rather than the TPU. There is no error generated when this happens, but the scores will be lower. Refer to [this Google document](https://coral.withgoogle.com/docs/reference/edgetpu.basic.basic_engine/) for more information.
