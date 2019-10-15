@@ -48,6 +48,7 @@ FPGA = 'fpga'
 NPU = 'npu'
 VPU = 'myriad'
 HDDL = 'hddl'
+TPU = 'tpu'
 
 # Units
 FPS = 'fps'
