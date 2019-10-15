@@ -11,16 +11,29 @@ Several configuration files are already provided. When writing a custom configur
 # System Requrirements
 
 ## Disk Space
-MLMark may exceed the disk space of the default flash partition. It is recommended to install a high-speed SD Card in the micro-SD slot and work from that mount.
 
-## Hardware Setup
-Requirements can be found at the official Coral page for the [USB accelerator](https://coral.withgoogle.com/docs/accelerator/get-started/) or the [development board](https://coral.withgoogle.com/docs/dev-board/datasheet/).
+MLMark may exceed the disk space of the default flash partition. It is recommended to use a high-speed SD Card in the micro-SD slot and work from that mount.
+
+## Platform Setup
+
+Before running MLMark on the Edge TPU device, first verify that the examples from Google work. Requirements can be found at the official Coral page for the [USB accelerator](https://coral.withgoogle.com/docs/accelerator/get-started/) or the [development board](https://coral.withgoogle.com/docs/dev-board/datasheet/). The image classification example is sufficient to verify the board is set up properly.
+
+## Software Setup
+
+As stated in the main MLMark docs, you will need to install Python `future`, `numpy` and `cv2`. The upgrade to `numpy` is required, since the version installed in the Mendel OS is not recent enough.
+
+~~~
+% pip3 install future
+% pip3 install numpy --upgrade
+~~~
+
+OpenCV installation is discussed in the following section, as it is a bit more complex.
 
 ## OpenCV 4.x
 Image pre-processing is done with Python OpenCV, which means OpenCV must be installed. For the USB accelerator, most systems can install Python OpenCV as follows:
 
 ~~~
-$ pip3 install opencv-python --user --upgrade
+% pip3 install opencv-python --upgrade
 ~~~
 
 However, OpenCV is not installed by default on the Coral board OS image. Instructions are provided below.
@@ -98,11 +111,10 @@ And test that the Python library was installed:
 '4.0.0'  
 ~~~
 
-
 # Model Conversion
 The "golden" MLMark Tensorflow models provided in this benchmark were converted from Tensorflow to TensorflowLite, and then quantized post-training using PTIQ on 200 images from the relevant data set. Refer to the `utility` scripts in the `tensorflow_lite` target for details on how this was performed. The models were then compiled for the Edge TPU using the Google TPU flow. If the TFLite models are not compiled using the Google flow, the TFLite will run on the host CPU, rather than the TPU. There is no error generated when this happens, but the scores will be lower. Refer to [this Google document](https://coral.withgoogle.com/docs/reference/edgetpu.basic.basic_engine/) for more information.
 
 # Known Issues
 
-* To solve this error: `RuntimeError: Error in device opening (/sys/bus/usb/devices/1-1)!`, 
-  unplug and re-plug the USB accelerator.
+* To solve this error: `RuntimeError: Error in device opening (/sys/bus/usb/devices/1-1)!`, unplug and re-plug the USB accelerator.
+* The error: `RuntimeError: Error in device opening (/dev/apex_0)!` on the dev board may indicate that the `sudo` access is required.
