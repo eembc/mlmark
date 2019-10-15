@@ -41,13 +41,14 @@ Update the OS packages:
 ~~~
 Install the standard build prerequisites (including Python3 development, otherwise CMake will not build the Python libraries).
 ~~~
-% sudo apt-get install build-essential cmake unzip pkg-config
-% sudo apt-get install libjpeg-dev libpng-dev libtiff-dev
-% sudo apt-get install libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
-% sudo apt-get install libxvidcore-dev libx264-dev
-% sudo apt-get install libgtk-3-dev
-% sudo apt-get install libatlas-base-dev gfortran
-% sudo apt-get install python3-dev
+% sudo apt-get install build-essential cmake unzip pkg-config \
+ libjpeg-dev libpng-dev libtiff-dev \
+ libavcodec-dev libavformat-dev libswscale-dev libv4l-dev \
+ libxvidcore-dev libx264-dev \
+ libgtk-3-dev \
+ libatlas-base-dev gfortran \
+ python3-dev \
+ -y
 ~~~
 Working from the MicroSD card partition, download OpenCV source:
 ~~~
