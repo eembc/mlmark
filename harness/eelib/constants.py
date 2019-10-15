@@ -10,7 +10,7 @@
 # effective EEMBC Benchmark License Agreement, you must discontinue use.
 # 
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # Note: developer errors are CRITICAL, user config errors are ERRORS
 
