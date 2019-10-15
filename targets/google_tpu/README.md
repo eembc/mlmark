@@ -112,7 +112,7 @@ And test that the Python library was installed:
 ~~~
 
 # Model Conversion
-The "golden" MLMark Tensorflow models provided in this benchmark were converted from Tensorflow to TensorflowLite, and then quantized post-training using PTIQ on 200 images from the relevant data set. Refer to the `utility` scripts in the `tensorflow_lite` target for details on how this was performed. The models were then compiled for the Edge TPU using the Google TPU flow. If the TFLite models are not compiled using the Google flow, the TFLite will run on the host CPU, rather than the TPU. There is no error generated when this happens, but the scores will be lower. Refer to [this Google document](https://coral.withgoogle.com/docs/reference/edgetpu.basic.basic_engine/) for more information.
+The "golden" MLMark Tensorflow models provided in this benchmark were converted from Tensorflow to TensorflowLite, and then quantized post-training using PTIQ on 200 images from the relevant data set. Refer to the `utility` scripts in the `tensorflow_lite` target for details on how this was performed. The models were then compiled for the Edge TPU using the Google TPU flow. If the TFLite models are not compiled using the Google flow, the TFLite will run on the host CPU, rather than the TPU. There is no error generated when this happens, but the scores will be lower. Refer to [this Coral/Google document](https://coral.withgoogle.com/docs/edgetpu/compiler/) for more information on the Edge TPU Compiler.
 
 # Known Issues
 
