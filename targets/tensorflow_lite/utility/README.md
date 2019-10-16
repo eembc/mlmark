@@ -10,7 +10,7 @@ https://www.tensorflow.org/lite/performance/post_training_quantization
 * An OS running Python3 that has OpenCV support (it was tested on Ubuntu 16.04 and 18.04, and macOS Mojave)
 
 ### Tensorflow 1.15+
-At the time of writing this readme, the scripts worked with tensorflow 1.15.rc2 version.
+At the time of writing this readme, the scripts worked with tensorflow 1.15rc2 version.
 Install it like this:
 ~~~
 $ pip3 install tensorflow==1.15rc2
