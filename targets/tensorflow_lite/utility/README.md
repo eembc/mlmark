@@ -13,7 +13,7 @@ https://www.tensorflow.org/lite/performance/post_training_quantization
 At the time of writing this readme, the scripts worked with tensorflow 1.15.rc2 version.
 Install it like this:
 ~~~
-$ pip3 install tensorflow==1.15.0rc2
+$ pip3 install tensorflow==1.15rc2
 ~~~
 
 ### OpenCV 4.x
