@@ -1,0 +1,14 @@
+[
+    {
+        "target": "armnn_tf",
+        "workload": "resnet50",
+        "params": {
+            "hardware": "gpu",
+            "precision": "fp32",
+            "batch": 1,
+            "concurrency": 1,
+            "mode": "throughput",
+            "iterations": 1024
+        }
+    }
+]

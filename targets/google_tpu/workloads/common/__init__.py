@@ -1,0 +1,245 @@
+# 
+# Copyright (C) 2019 EEMBC(R). All Rights Reserved
+# 
+# All EEMBC Benchmark Software are products of EEMBC and are provided under the
+# terms of the EEMBC Benchmark License Agreements. The EEMBC Benchmark Software
+# are proprietary intellectual properties of EEMBC and its Members and is
+# protected under all applicable laws, including all applicable copyright laws.  
+# 
+# If you received this EEMBC Benchmark Software without having a currently
+# effective EEMBC Benchmark License Agreement, you must discontinue use.
+# 
+
+import sys
+
+if sys.version_info[0] < 3:
+	raise Exception("This target requires python 3.x")
+
+from eelib import models
+from eelib import getter
+from eelib import paths
+from eelib import constants as const
+
+from . import preprocessor
+
+import logging as log
+import os
+import numpy as np
+import time
+import json
+import tempfile
+
+# Note: Putting checks in JSON forces limits on the dataType of the value. Hence,
+# it was pulled from a specification file into python code. It is up to the
+# developer to ultimately code parameter checking, but it should be very clear
+# to the user what is wrong. This file is just an example of how it could be
+# done.
+
+# NOTE: The params field must be COMPLETELY filled in
+
+def checkParam(param, value):
+	'''Checks a paramater against known values for this hardware. Rather
+	than put the supported features in a JSON file, this forces the developer
+	to rely on constants and provide more succinct detail. Returns True if
+	the value is correct for the param.'''
+
+	if param == const.BATCH:
+		if value < 1 or value > 256:
+			log.error("Range of '%s' values is [1, 256]" % const.BATCH)
+			return False
+	elif param == const.MODE:
+		valid = [const.THROUGHPUT, const.ACCURACY, const.LATENCY]
+		if not value in valid:
+			log.error("Valid values for '%s' are %s" % (const.MODE, valid))
+			return False
+	elif param == const.RUNITERATIONS:
+		if value < 1:
+			log.error('Iterations must be > 0')
+			return False
+	elif param == const.HARDWARE:
+		valid = [const.TPU]
+		if not value in valid:
+			log.error("Valid values for '%s' are %s" % (const.HARDWARE, valid))
+			return False
+	elif param == const.PRECISION:
+		valid = [const.INT8]
+		if not value in valid:
+			log.error("Valid values for '%s' are %s" % (const.PRECISION, valid))
+			return False
+	elif param == const.CONCURRENCY:
+		if value != 1:
+			log.error("This target only supports concurrency of 1")
+			return False
+	else:
+		log.error("Unknown parameter '%s'" % param)
+		return False
+	return True
+
+def checkParams(params):
+	'''Checks all parameters in the config to see if they are valid. Does
+	NOT check for consistency, just validity. Returns True or False.'''
+
+	status = True
+	for k, v in params.items():
+		# Don't exit on the first bad param, check them all for the user
+		if checkParam(k, v) == False:
+			status = False
+	return status
+
+def validateParams(params):
+	'''This function makes sure the input parameters are consistent for the
+	type of scenario requested. Where checkParams() validates the values,
+	this function checks for logicial consistency. Returns a modified 'params'
+	structure that should replace the input 'params'.'''
+
+	# First make sure the parameters are set to valid values
+	if checkParams(params) == False:
+		return None
+
+	batch = params.get(const.BATCH)
+	concurrency = params.get(const.CONCURRENCY)
+	mode = params.get(const.MODE)
+	runIterations = params.get(const.RUNITERATIONS)
+	hardware = params.get(const.HARDWARE)
+	precision = params.get(const.PRECISION)
+
+	if precision == None:
+		log.warning("'%s' not specified, using '%s'" % (const.PRECISION, const.INT8))
+		params[const.PRECISION] = const.INT8
+	if batch is None:
+		log.warning("'%s' not specified, using '%d'" % (const.BATCH, 1))
+		params[const.BATCH] = 1
+	if batch != 1:
+		log.warning("'%s' must be 1" % (const.BATCH))
+		params[const.BATCH] = 1
+	if concurrency is None or concurrency != 1:
+		log.warning("'%s' not specified, using '%d'" % (const.CONCURRENCY, 1))
+		params[const.CONCURRENCY] = 1
+	if mode == None:
+		log.warning("'%s' not specified, using '%s'" % (const.MODE, const.THROUGHPUT))
+		params[const.MODE] = const.THROUGHPUT
+	if runIterations == None:
+		log.warning("'%s' not specified, using '%d'" % (const.RUNITERATIONS, 1))
+		params[const.RUNITERATIONS] = 1
+	if mode == const.ACCURACY:
+		if params[const.RUNITERATIONS] != 1:
+			log.warning("'%s' forced to '%d' for accuracy" % (const.RUNITERATIONS, 1))
+			params[const.RUNITERATIONS] = 1;
+	if mode == const.LATENCY or mode == const.ACCURACY:
+		if batch and batch > 1:
+			log.warning("'%s' forced to '%d' for latency/accuracy" % (const.BATCH, 1))
+		params[const.BATCH] = 1
+	elif mode == const.THROUGHPUT:
+		if batch == None:
+			log.warning("'%s' not specified, using '%d'" % (const.BATCH, 1))
+			params[const.BATCH] = 1
+	if hardware == None:
+		log.warning("'%s' not specified, using '%s'" % (const.HARDWARE, const.TPU))
+		params[const.HARDWARE] = const.TPU
+	return params
+
+def runLatency(modelName, net, params):
+	log.info('Running prediction...')
+	fns = getter.apiGetTestInputs(modelName, 1)
+	img = preprocessor.apiProcess(modelName, fns[0])
+	times = []
+	for j in range(params[const.RUNITERATIONS]):
+		t0 = time.time()
+		res = net.predict(img)
+		tn = time.time()
+		t = tn - t0
+		log.debug('%f sec' % t)
+		times.append(t)
+	return times
+
+def runThroughput(modelName, net, params):
+	log.info('Running prediction...')
+	b = params[const.BATCH];
+	fns = getter.apiGetTestInputs(modelName, b)
+	tsum = 0
+	# Load the entire batch into system/accelerator memory for iterating
+	imgs = []
+	for i in range(b):
+		img = preprocessor.apiProcess(modelName, fns.pop())
+		imgs.append(img)
+	# TPU takes different format, unlike others
+	imgs = np.array(imgs)
+	imgs = imgs.flatten()
+	# Allow one warmup prediction outside the overall timing loop
+	times = []
+	t0 = time.time()
+	net.predict(imgs)
+	tn = time.time()
+	t = tn - t0
+	times.append(t)
+	# Overall timing loop for throughput
+	t_start = time.time()
+	for i in range(params[const.RUNITERATIONS]):
+		t0 = time.time()
+		net.predict(imgs)
+		tn = time.time()
+		t = tn - t0
+		times.append(t)
+	t_finish = time.time()
+	times.insert(0, t_finish - t_start)
+	return times
+
+def runValidation(modelName, net, params):
+	'''Process all of the validation inputs from the apiGet* function
+	
+	This is a reference example. Batch size can be set to whatever is optimal.
+	The important things to note are: [a] inputs come from the getter, and [b]
+	the results are returned in the form of a list of lists defined in the
+	report.py comments, depending on the workload/model.
+	
+	Note: This function returns its value upstream to the harness through the
+	apiRun() API function. It is only an example, apiRun() can be implemented
+	however a developer chooses.'''
+	imageFiles = getter.apiGetValidationInputs(modelName)
+	imageData = []
+	# Results will be accumulate here
+	results = []
+	t = len(imageFiles)
+	# Feeding 10 at a time
+	log.info('Running prediction...')
+	N = len(imageFiles)
+	B = 1 # resnet is now batch 1?
+	m = 0
+	for i in range(t):
+		data = preprocessor.apiProcess(modelName, imageFiles[i])
+		imageData.append(data)
+		# Batch size of B; TODO test for one-off fail
+		if len(imageData) == B or (i+1) == t:
+			img = np.array(imageData)
+			img = img.flatten()
+			res = net.predict(img)
+			log.debug("%d predictions left" % (N-(i+1)))
+			imageData = []
+			for j in range(len(res['predictions'])):
+				results.append([imageFiles[m], res['predictions'][j]])
+				m = m + 1
+	# For debugging
+	tmpdir = tempfile.mkdtemp()
+	outputFn = os.path.join(tmpdir, 'outputs.json')
+	with open(outputFn, 'w') as fp:
+		json.dump(results, fp)
+	log.debug('Validation output file is {}'.format(outputFn))
+	return results
+
+# Need to validate parameters before creating the network
+def pre(modelName, params):
+	return validateParams(params)
+
+def run(modelName, net, params):
+	# Keep the exit point of the module the apiRun() function
+	if params == None:
+		log.warning("No valid parameters for this run")
+		return None
+	log.debug("Final params: %s" % json.dumps(params))
+	if params[const.MODE] == const.ACCURACY:
+		return runValidation(modelName, net, params)
+	elif params[const.MODE] in [const.THROUGHPUT, const.LATENCY]:
+		return runThroughput(modelName, net, params)
+	else:
+		log.critical("Invalid configuration mode '%s'" % params[const.MODE])
+		return None

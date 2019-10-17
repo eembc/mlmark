@@ -16,6 +16,7 @@ Rather than setting rules and allowing individuals to perform optimizations in a
 	* Intel® CPUs, GPUs and neural compute sticks using OpenVINO®
 	* NVIDIA® GPUs using TensorRT
 	* Arm® Cortex®-A CPUs and Arm Mali™ family of GPUs using Neon™ technology and OpenCL™, respectively.
+	* Google Edge TPU using TensorFlow Lite
 
 3. Select Specific Models
 	
@@ -227,11 +228,15 @@ The targets provided are:
 
 * Tensorflow (`tensorflow`) - This is native Tensorflow running under Python. Only precision `fp32` and conurrency of 1 are supported. If `tensorflow-gpu` is installed, hardware type `gpu` is available.
 
+* Tensorflow Lite (`tensorflow_lite`) - Similar to the Tensorflow target, this target uses TensorFlow Lite native Python. Both frameworks are advancing rapidly, and whether or not this target functions properly depends on the status of the `tensorflow` and/or `tflite_runtime` frameworks. Results vary considerably with the Python wheel for the runtime. As a result, this target is provided as a tool for sanity checks.
+
 * Intel OpenVINO (`openvino_ubuntu`) - This target supports Intel CPUs with OpenVINO and MKL, GPUs, Movidius Neural Compute Sticks, HDDLr and FPGA.
 
 * TensorRT Nano (`tensorrt`) - This target uses TensorRT, cuDNN and Cuda optimized for the Jetson Nano platform.
 
-* ArmNN (`armnn_ubuntu`) - This target uses the ArmNN 19.02 API and Arm Compute Library with Neon (ACL) on Arm Cortex-A5 and Cortext-A7 CPUs as well as Mali GPUs. (Currently SSDMobileNet is not supported.)
+* ArmNN (`armnn_tf`) - This target uses the ArmNN 19.02 API and Arm Compute Library with Neon (ACL) on Arm Cortex-A5 and Cortext-A7 CPUs as well as Mali GPUs. The C++ files use the Tensorflow model loader, not the TensorFlow Lite API (Currently SSDMobileNet is not supported.)
+
+* Google Edge TPU (`google_tpu`) - This target uses the native Python edge-TPU package under Tensorflow for the Google developer board and USB accelerator versions of the edge TPU. Only `int8` precision on `tpu` hardware is supported. The models were compiled from the Tensorflow Lite model folder using the Edge TPU flow. Refer to the target and model READMEs for more information. 
 
 For more details about the targets, please see the README.md files for each respective target in this repository. Vendors seeking to include targets in the repository should contact info@eembc.org.
 

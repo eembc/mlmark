@@ -1,0 +1,14 @@
+[
+    {
+        "target": "tensorflow_lite",
+        "workload": "mobilenet",
+        "params": {
+            "hardware": "cpu",
+            "precision": "int8",
+            "batch": 1,
+            "concurrency": 1,
+            "mode": "throughput",
+            "iterations": 1024
+        }
+    }
+]
