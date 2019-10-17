@@ -12,7 +12,7 @@ Several configuration files are already provided. When writing a custom configur
 
 ## Disk Space
 
-MLMark may exceed the disk space of the default flash partition. It is recommended to use a high-speed SD Card in the micro-SD slot and work from that mount.
+MLMark may exceed the disk space of the default flash partition on the Coral Dev Board; it is recommended to use a high-speed SD Card in the micro-SD slot and work from that mount.
 
 ## Platform Setup
 
@@ -112,7 +112,10 @@ And test that the Python library was installed:
 ~~~
 
 # Model Conversion
-The "golden" MLMark Tensorflow models provided in this benchmark were converted from Tensorflow to TensorflowLite, and then quantized post-training using PTIQ on 200 images from the relevant data set. Refer to the `utility` scripts in the `tensorflow_lite` target for details on how this was performed. The models were then compiled for the Edge TPU using the Google TPU flow. If the TFLite models are not compiled using the Google flow, the TFLite will run on the host CPU, rather than the TPU. There is no error generated when this happens, but the scores will be lower. Refer to [this Coral/Google document](https://coral.withgoogle.com/docs/edgetpu/compiler/) for more information on the Edge TPU Compiler.
+
+The "golden" MLMark Tensorflow models provided in this benchmark were converted and quantized from the `.pb` file to `.tflite` by using post-training full-integer quantisation (PTIQ) with 200 calibration images from the relevant data set. The code for this can be found in the `utility` directory in this target.
+
+The models were then compiled for the Edge TPU using the Google TPU flow. If the TFLite models are not compiled using the Google flow, the TFLite will run on the host CPU, rather than the TPU. There is no error generated when this happens, but the scores will be lower. Refer to [this Coral/Google document](https://coral.withgoogle.com/docs/edgetpu/compiler/) for more information on the Edge TPU Compiler.
 
 # Known Issues
 

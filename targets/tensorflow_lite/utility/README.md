@@ -1,40 +1,13 @@
-# Tensorflow Lite Post Training Full Integer Quantisation callibration scripts
+# TensorFlow Lite Post-Training Full-Integer Quantisation calibration scripts
 
-overview:
-https://www.tensorflow.org/lite/performance/post_training_quantization
+These scripts convert a TensorFlow `*.pb` model into an `int8` quantized `*.tflite` model.
 
-## System Requrirements
+An overview of this process can be found [here](https://www.tensorflow.org/lite/performance/post_training_quantization).
 
-* As on first week of Oct2019, tensorflow nightly build.
+Simply run the scripts with python3:
 
-* An OS running Python3 that has OpenCV support (it was tested on Ubuntu 16.04 and 18.04, and macOS Mojave)
-
-### Tensorflow 1.15+
-At the time of writing this readme, the scripts worked with tensorflow 1.15rc2 version.
-Install it like this:
-~~~
-$ pip3 install tensorflow==1.15rc2
-~~~
-
-### OpenCV 4.x
-
-Image preprocessing is done via Python OpenCV. Most systems can install Python OpenCV as follows:
-
-~~~
-$ python -m pip install opencv-python --user --upgrade
-~~~
-
-However, some Arm systems do not have a Python distribution at the PIP web wheel URI, so you must install via `apt`:
-
-~~~
-$ sudo apt install python-opencv
-~~~
-
-## Execution of scripts
-Simply run the scripts with python3.
 ~~~
 $ python3 mobilenet_PTIQ_script.py
 ~~~
+
 A folder named PTIQ will be created containing converted and quantized tflite file for a model. 
-
-

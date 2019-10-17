@@ -10,12 +10,18 @@ This is a generic target for running on hardware-independent TensorFlow Lite usi
  https://www.tensorflow.org/lite/guide/python
 
 * Some systems may require TensorFlow 1.15rc2:
+
 ~~~
 sudo pip3 install tensorflow==1.15rc2
 ~~~
 
 ## Model Conversion
-The "golden" MLMark Tensorflow models provided in this benchmark were converted from Tensorflow to TensorflowLite, and then quantized post-training using PTIQ on 200 images from the relevant data set. Refer to the scripts in the `utility` for the exact commands used to perform the conversion.
+
+The "golden" MLMark Tensorflow models provided in this benchmark were converted two ways:
+
+1. The `fp32` models were created using the `tflite_convert` program from Tensorflow. Examples can be found on the [Tensorflow website](https://www.tensorflow.org/lite/convert/cmdline_examples).
+
+2. The `int8` models were converted and quantized from the `.pb` file to `.tflite` by using post-training full-integer quantisation (PTIQ) with 200 calibration images from the relevant data set. The code for this can be found in the `utility` directory in this target.
 
 ## OpenCV 4.x
 
