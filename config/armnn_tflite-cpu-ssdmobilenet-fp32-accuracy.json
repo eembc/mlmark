@@ -1,0 +1,14 @@
+[
+    {
+        "target": "armnn_tflite",
+        "workload": "ssdmobilenet",
+        "params": {
+            "hardware": "cpu",
+            "precision": "fp32",
+            "batch": 1,
+            "concurrency": 1,
+            "mode": "accuracy",
+            "iterations": 1
+        }
+    }
+]

@@ -1,0 +1,14 @@
+[
+    {
+        "target": "armnn_tflite",
+        "workload": "resnet50",
+        "params": {
+            "hardware": "gpu",
+            "precision": "int8",
+            "batch": 1,
+            "concurrency": 1,
+            "mode": "throughput",
+            "iterations": 1024
+        }
+    }
+]
