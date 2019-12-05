@@ -2,6 +2,14 @@
 
 This target runs on NVIDIA hardware by using the TensorRT framework.
 
+**NOTE**: As NVIDIA releases new TensorRT and Jetpack versions, it may become necessary to recompile the C++ interface libraries in this target. Please refer to the *Compiling* section below. An indication of this may be an error such as:
+
+~~~
+python3: engine.cpp:1104: bool nvinfer1::rt::Engine::deserialize(const void*, std::size_t, nvinfer1::IGpuAllocator&, nvinfer1::IPluginFactory*): Assertion `size >= bsize && "Mismatch between allocated memory size and expected size of serialized engine."' failed.
+~~~
+
+...this is a sign you should rebuild.
+
 ## System Requriements
 
 * **Operating System**: Ubuntu 16.04 LTS (x86_64 or aarch64)
