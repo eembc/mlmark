@@ -20,7 +20,7 @@ include_directories(/usr/local/cuda/include /usr/include/aarch64-linux-gnu /usr/
 link_directories(/usr/lib/aarch64-linux-gnu /usr/local/cuda/lib64)
 
 #https://github.com/NVlabs/cub
-include_directories(/home/dev/cub-1.8.0)
+include_directories(~/cub-1.8.0)
 
 
 ADD_LIBRARY(class_resnet50 SHARED resnet50_class.cpp loadImage.cpp warmup.cu)
