@@ -24,7 +24,7 @@ Command to do this:
 
 ~~~
 
-$ convert-to-uff --input-file file_name.pb -O NMS -p config.py
+$ convert-to-uff --input-file ../../../models/tensorflow/ssdmobilenet/frozen_graph.pb -o ../../../models/tensorflow_uff/ssdmobilenet/frozen_graph_ssdmobilenet.uff -O NMS -p config.py
 
 ~~~
 

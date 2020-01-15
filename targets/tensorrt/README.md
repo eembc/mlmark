@@ -13,7 +13,7 @@ python3: engine.cpp:1104: bool nvinfer1::rt::Engine::deserialize(const void*, st
 ## System Requriements
 
 * **Operating System**: Ubuntu 16.04 LTS (x86_64 or aarch64)
-* NVIDIA JetPack 4.2
+* NVIDIA JetPack 4.3
 
 This target only supports hardware type `gpu`. Precision depends on the platform:
 
@@ -94,6 +94,11 @@ As stated earlier, the default libraries were compiled on Arm architecture for b
 % cmake .
 % make
 ~~~
+
+### Dependencies
+* CUB: https://github.com/NVlabs/cub, download and extract then change the include_directories in cpp_environment/CMakeLists.txt
+
+include_directories(/home/dev/cub-1.8.0)
 
 ## Known Issues:
 

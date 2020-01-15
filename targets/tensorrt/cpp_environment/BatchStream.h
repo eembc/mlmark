@@ -52,12 +52,12 @@ public:
         , mMaxBatches(maxBatches)
 	, mModel(model)
     {
-        mDims = nvinfer1::DimsNCHW{batchSize, INPUT_C, INPUT_H, INPUT_W};
-        mImageSize = mDims.c() * mDims.h() * mDims.w();
+        mDims = nvinfer1::Dims4{batchSize, INPUT_C, INPUT_H, INPUT_W};
+        mImageSize = mDims.d[1] * mDims.d[2] * mDims.d[3];
         mBatch.resize(mBatchSize * mImageSize, 0);
         mLabels.resize(mBatchSize, 0);
-        mFileBatch.resize(mDims.n() * mImageSize, 0);
-        mFileLabels.resize(mDims.n(), 0);
+        mFileBatch.resize(mDims.d[0] * mImageSize, 0);
+        mFileLabels.resize(mDims.d[0], 0);
         reset(0);
     }
 
@@ -65,7 +65,7 @@ public:
     {
         mBatchCount = 0;
         mFileCount = 0;
-        mFileBatchPos = mDims.n();
+        mFileBatchPos = mDims.d[0];
         skip(firstBatch);
     }
 
@@ -76,12 +76,12 @@ public:
 
         for (int csize = 1, batchPos = 0; batchPos < mBatchSize; batchPos += csize, mFileBatchPos += csize)
         {
-            assert(mFileBatchPos > 0 && mFileBatchPos <= mDims.n());
-            if (mFileBatchPos == mDims.n() && !update())
+            assert(mFileBatchPos > 0 && mFileBatchPos <= mDims.d[0]);
+            if (mFileBatchPos == mDims.d[0] && !update())
                 return false;
 
             // copy the smaller of: elements left to fulfill the request, or elements left in the file buffer.
-            csize = std::min(mBatchSize - batchPos, mDims.n() - mFileBatchPos);
+            csize = std::min(mBatchSize - batchPos, mDims.d[0] - mFileBatchPos);
             std::copy_n(getFileBatch() + mFileBatchPos * mImageSize, csize * mImageSize, getBatch() + batchPos * mImageSize);
         }
         mBatchCount++;
@@ -90,9 +90,9 @@ public:
 
     void skip(int skipCount)
     {
-        if (mBatchSize >= mDims.n() && mBatchSize % mDims.n() == 0 && mFileBatchPos == mDims.n())
+        if (mBatchSize >= mDims.d[0] && mBatchSize % mDims.d[0] == 0 && mFileBatchPos == mDims.d[0])
         {
-            mFileCount += skipCount * mBatchSize / mDims.n();
+            mFileCount += skipCount * mBatchSize / mDims.d[0];
             return;
         }
 
@@ -106,7 +106,7 @@ public:
     float* getLabels() { return mLabels.data(); }
     int getBatchesRead() const { return mBatchCount; }
     int getBatchSize() const { return mBatchSize; }
-    nvinfer1::DimsNCHW getDims() const { return mDims; }
+    nvinfer1::Dims4 getDims() const { return mDims; }
 
 private:
     float* getFileBatch() { return mFileBatch.data(); }
@@ -155,16 +155,16 @@ private:
         }
         std::vector<float> data(volume(mDims));
 
-        long int volChl = mDims.h() * mDims.w();
+        long int volChl = mDims.d[2] * mDims.d[3];
 	if(mModel=="Resnet50")
 	{
-         for (int i = 0, volImg = mDims.c() * mDims.h() * mDims.w(); i < mBatchSize; ++i)
+         for (int i = 0, volImg = mDims.d[1] * mDims.d[2] * mDims.d[3]; i < mBatchSize; ++i)
          {
-            for (int c = 0; c < mDims.c(); ++c)
+            for (int c = 0; c < mDims.d[1]; ++c)
             {
                 for (int j = 0; j < volChl; ++j)
                 {
-                    data[i * volImg + c * volChl + j] = float(b_images[i].buffer[j * mDims.c() + c]); //preprocessing is necessary.
+                    data[i * volImg + c * volChl + j] = float(b_images[i].buffer[j * mDims.d[1] + c]); //preprocessing is necessary.
                 }//loop1
             }//loop2
           }//loop3
@@ -172,20 +172,20 @@ private:
 
 	if(mModel=="Mobilenet")
 	{
-         for (int i = 0, volImg = mDims.c() * mDims.h() * mDims.w(); i < mBatchSize; ++i)
+         for (int i = 0, volImg = mDims.d[1] * mDims.d[2] * mDims.d[3]; i < mBatchSize; ++i)
          {
-            for (int c = 0; c < mDims.c(); ++c)
+            for (int c = 0; c < mDims.d[1]; ++c)
             {
                 for (int j = 0; j < volChl; ++j)
                 {
-                    data[i * volImg + c * volChl + j] = float(b_images[i].buffer[j * mDims.c() + c])/128.0 ; //preprocessing is necessary.
+                    data[i * volImg + c * volChl + j] = float(b_images[i].buffer[j * mDims.d[1] + c])/128.0 ; //preprocessing is necessary.
                 }//loop1
             }//loop2
           }//loop3
 	}//if condition
 	
 
-        std::copy_n(data.data(), mDims.n() * mImageSize, getFileBatch());
+        std::copy_n(data.data(), mDims.d[0] * mImageSize, getFileBatch());
 
         mFileBatchPos = 0;
         return true;
@@ -199,14 +199,14 @@ private:
     int mFileCount{0}, mFileBatchPos{0};
     int mImageSize{0};
 
-    nvinfer1::DimsNCHW mDims;
+    nvinfer1::Dims4 mDims;
     std::vector<float> mBatch;
     std::vector<float> mLabels;
     std::vector<float> mFileBatch;
     std::vector<float> mFileLabels;
 };
 
-class Int8EntropyCalibrator : public nvinfer1::IInt8EntropyCalibrator
+class Int8EntropyCalibrator : public nvinfer1::IInt8EntropyCalibrator2
 {
 public:
     Int8EntropyCalibrator(BatchStream& stream, int firstBatch, std::string calibrationTableName, bool readCache = true)
@@ -214,7 +214,7 @@ public:
         , mCalibrationTableName(std::move(calibrationTableName))
         , mReadCache(readCache)
     {
-        nvinfer1::DimsNCHW dims = mStream.getDims();
+        nvinfer1::Dims4 dims = mStream.getDims();
         mInputCount = volume(dims);
         CHECK(cudaMalloc(&mDeviceInput, mInputCount * sizeof(float)));
         mStream.reset(firstBatch);
