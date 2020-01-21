@@ -85,20 +85,23 @@ These folders are created after the first run:
 
 `Results`: Interim results in the form of text files are stored in this folder.
 
-## Compiling
+## Compiling & Dependencies
 
 As stated earlier, the default libraries were compiled on Arm architecture for both Nano and Xavier. The libraries can be recompiled for x86_64 as well by doing the following:
+
+In order to compile, you must checkout NVlabs [cub](https://github.com/NVlabs/cub) and then add this line to `cpp_environment/CMakeLists.txt`:
+
+~~~
+include_directories(/home/dev/cub)
+~~~
+
+...where `/home/dev/cub` is the path to the repository. Then you can build:
 
 ~~~
 % cd targets/tensorrt/cpp_environment
 % cmake .
 % make
 ~~~
-
-### Dependencies
-* CUB: https://github.com/NVlabs/cub, download and extract then change the include_directories in cpp_environment/CMakeLists.txt
-
-include_directories(/home/dev/cub-1.8.0)
 
 ## Known Issues:
 
