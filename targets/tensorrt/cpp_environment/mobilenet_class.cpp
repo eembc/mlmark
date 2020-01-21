@@ -13,11 +13,22 @@
 #include <sstream>  //strings.
 #include <stdlib.h> //exit
 #include <vector>
+#include "warmup.h"
 
 #define CUDA(x) cudaCheckError((x), #x, __FILE__, __LINE__)
 #define DIMS_C(x) x.d[0]
 #define DIMS_H(x) x.d[1]
 #define DIMS_W(x) x.d[2]
+
+template <typename T>
+struct destroyer
+{
+    void operator()(T* t) { t->destroy(); }
+};
+
+template <typename T> using unique_ptr_destroy = std::unique_ptr<T, destroyer<T> >;
+
+
 
 // INT8 Calibration, currently set to calibrate over 500 images
 static constexpr int CAL_BATCH_SIZE = 50;
@@ -26,7 +37,7 @@ static constexpr int FIRST_CAL_BATCH = 0, NB_CAL_BATCHES = 10;
 // Required by TensorRT API. Standard practice.
 class Logger : public nvinfer1::ILogger {
   void log(Severity severity, const char *msg) override {
-    if (severity != Severity::kINFO /*|| mEnableDebug*/) {
+    if (severity <= Severity::kINFO /*|| mEnableDebug*/) {
       // printf("%s\n", msg);
     }
   }
@@ -34,7 +45,7 @@ class Logger : public nvinfer1::ILogger {
 
 struct outputLayer {
   std::string name;
-  nvinfer1::DimsCHW dims;
+  nvinfer1::Dims3 dims;
   uint32_t size;
   float *CPU;
   float *CUDA;
@@ -98,15 +109,16 @@ public:
 
   // Create an optimized network from uff model file.
   bool create_engine(const std::string &modelFile, const char *engine_name,
-                     int maxBatchSize, char *precision) {
+                     int maxBatchSize, char *precision, int cudaDevice, int DLACore = -1, bool fallback = true) {
+    cudaSetDevice(cudaDevice);
     // create API root class - must span the lifetime of the engine usage
-    nvinfer1::IBuilder *builder = nvinfer1::createInferBuilder(gLogger);
-    nvinfer1::INetworkDefinition *network = builder->createNetwork();
+    unique_ptr_destroy<nvinfer1::IBuilder> builder{ nvinfer1::createInferBuilder(gLogger) };
+    unique_ptr_destroy<nvinfer1::INetworkDefinition> network{ builder->createNetworkV2(0) };
+    unique_ptr_destroy<nvuffparser::IUffParser> parser{ nvuffparser::createUffParser() };
 
-    auto parser = nvuffparser::createUffParser();
 
     cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
+    cudaGetDeviceProperties(&prop, cudaDevice);
     std::string device_name(prop.name);
     std::string optimisation_precision(precision);
 
@@ -121,7 +133,7 @@ public:
                                          "CalibrationTable_mobilenet");
 
     parser->registerInput(
-        "input", nvinfer1::DimsCHW(3, 224, 224),
+        "input", nvinfer1::Dims3(3, 224, 224),
         nvuffparser::UffInputOrder::kNCHW); // input for frozen_model.
     parser->registerOutput(
         "MobilenetV1/Predictions/Reshape_1"); // Name of output layer.
@@ -144,17 +156,32 @@ public:
                 << network->getInput(i)->getName() << "\":  " << dims.d[0]
                 << "x" << dims.d[1] << "x" << dims.d[2] << std::endl;
     }
-    // build the engine
 
-    builder->setMinFindIterations(2);
-    builder->setAverageFindIterations(2);
+    for (unsigned int i = 0, n = network->getNbInputs(); i < n; i++)
+    {
+        // Set formats and data types of inputs
+        auto input = network->getInput(i);
+        input->setType(DataType::kFLOAT);
+        input->setAllowedFormats(1U << static_cast<int>(TensorFormat::kLINEAR));
+    }
+
+    for (unsigned int i = 0, n = network->getNbOutputs(); i < n; i++)
+    {
+        // Set formats and data types of outputs
+        auto output = network->getOutput(i);
+        output->setType(DataType::kFLOAT);
+        output->setAllowedFormats(1U << static_cast<int>(TensorFormat::kLINEAR));
+    }
+
+    // build the engine
+    unique_ptr_destroy<IBuilderConfig> config{builder->createBuilderConfig()};
     builder->setMaxBatchSize(maxBatchSize);
-    builder->setMaxWorkspaceSize(64 << 20); // 64MBs of space
+    config->setMaxWorkspaceSize(64 << 20); // 64MBs of space
 
     if (optimisation_precision == "int8") {
-      if (device_name == "Xavier") {
-        builder->setInt8Mode(true);
-        builder->setInt8Calibrator(&calibrator);
+      if (builder->platformHasFastInt8()) {
+        config->setFlag(BuilderFlag::kINT8);
+        config->setInt8Calibrator(&calibrator);
       } else {
         printf("Selected device is:'%s'. This device does not support int8 "
                "optimization. Kindly use correct config file.\n\n",
@@ -162,22 +189,45 @@ public:
         exit(EXIT_FAILURE);
       }
     } else if (optimisation_precision == "fp16") {
-      builder->setFp16Mode(true);
+      config->setFlag(BuilderFlag::kFP16);
     } else if (optimisation_precision == "fp32") {
-      builder->setFp16Mode(false);
       // Dont do anything. Fp32 is default mode.
     }
-    builder->setDefaultDeviceType(nvinfer1::DeviceType::kGPU);
+    
+    if (DLACore == -1)
+    {
+      config->setDefaultDeviceType(nvinfer1::DeviceType::kGPU);
+    }
+    else
+    {
+        if (DLACore < builder->getNbDLACores())
+        {
+            config->setDefaultDeviceType(DeviceType::kDLA);
+            config->setDLACore(DLACore);
+            config->setFlag(BuilderFlag::kSTRICT_TYPES);
+
+            if (fallback)
+            {
+                config->setFlag(BuilderFlag::kGPU_FALLBACK);
+            }
+            if (optimisation_precision != "int8")
+            {
+                config->setFlag(BuilderFlag::kFP16);
+            }
+        }
+        else
+        {
+            printf("Cannot create DLA engine, %d not available\n", DLACore);
+            return false;
+        }
+    }
+    
 
     printf("initiated engine build for batchsize %d. Wait few minutes for "
            "%s to build the optimized engine.\n",
            maxBatchSize, device_name.c_str());
-    nvinfer1::ICudaEngine *engine = builder->buildCudaEngine(*network);
+    nvinfer1::ICudaEngine *engine = builder->buildEngineWithConfig(*network, *config);
     printf("2/4. Engine built successfully\n");
-
-    // we don't need the network definition any more, and we can destroy the
-    // parser
-    network->destroy();
 
     // serialize the engine, then close everything down
     nvinfer1::IHostMemory *trtModelStream = engine->serialize();
@@ -199,15 +249,13 @@ public:
     outFile.close();
     printf("4/4. Engine file created successfully\n");
 
-    engine->destroy();
-    builder->destroy();
-
     return true;
   }
 
   // this function reads the optimized engine file and loads it in mEngine
   // variable.
-  bool deserialize_load_engine(const char *engine_name) {
+  bool deserialize_load_engine(const char *engine_name, int cudaDevice) {
+    cudaSetDevice(cudaDevice);
     std::stringstream gieModelStream;
     gieModelStream.seekg(0, gieModelStream.beg);
     std::string engineName(engine_name);
@@ -460,8 +508,9 @@ public:
     std::vector<std::chrono::high_resolution_clock::time_point> streamStart(
         streams_data.size());
 
+    checkWarmUp(streams_data[0].stream, 5000);
     auto start = std::chrono::high_resolution_clock::now(); // start timekeeping
-                                                            // from this point.
+                                    // from this point.
     for (int i = 0; i < runs; i++) // runs are iterations. used in original code
                                    // for timing measurements.
     {
@@ -480,7 +529,7 @@ public:
           streams_data.at(queued_stream_id).host_buffers[input_index],
           input_byte_size, cudaMemcpyHostToDevice,
           streams_data.at(queued_stream_id).stream);
-
+      
       if (rc != cudaSuccess)
         throw std::runtime_error("HostToDevice: " +
                                  std::string(cudaGetErrorName(rc)));
@@ -492,7 +541,7 @@ public:
               batch_size,
               streams_data.at(queued_stream_id).device_buffers.data(),
               streams_data.at(queued_stream_id).stream, nullptr);
-
+      
       // copy back data from device to host.
       rc = cudaMemcpyAsync(
           streams_data.at(queued_stream_id).host_buffers[output_index],
@@ -610,9 +659,9 @@ extern "C" {
 Mobilenet *return_object() { return new Mobilenet(); }
 
 void create_trt(Mobilenet *obj, const char *uffName, const char *engineFileName,
-                int batchsize, char *precision) {
+                int batchsize, char *precision, int cudaDevice) {
   bool k = false;
-  k = obj->create_engine(uffName, engineFileName, batchsize, precision);
+  k = obj->create_engine(uffName, engineFileName, batchsize, precision, cudaDevice);
   if (k == true) {
     printf("TensorRT engine file written successfully. \n");
   }
@@ -626,9 +675,9 @@ void prepare_memory_trt(Mobilenet *obj, int maxBatchSize) {
   }
 }
 
-void deserialize_load_trt(Mobilenet *obj, const char *engine_name) {
+void deserialize_load_trt(Mobilenet *obj, const char *engine_name, int cudaDevice) {
   bool k = false;
-  k = obj->deserialize_load_engine(engine_name);
+  k = obj->deserialize_load_engine(engine_name, cudaDevice);
   if (k == true) {
     printf("TensorRT engine deserialized and loaded successfully. \n");
   }

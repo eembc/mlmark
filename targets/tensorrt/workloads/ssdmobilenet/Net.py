@@ -40,7 +40,8 @@ class SsdMobilenet:
         if precision == "fp32" :
             engine_file_name = "SSDMobilenet_fp32_"
         
-        engine_file_name=engine_file_name+str(batchsize)+".engine"
+        cudaDevice = int(os.getenv("cudaDevice")) if "cudaDevice" in os.environ else 0
+        engine_file_name=engine_file_name+"B"+str(batchsize)+"_CUDA"+str(cudaDevice)+".engine"
         engine_folder=os.path.join(TRT_DIR,"engines")
         if not os.path.isdir(engine_folder):
             os.mkdir(engine_folder)
@@ -56,7 +57,7 @@ class SsdMobilenet:
             py_load_engine = self.lib.deserialize_load_trt
             engineName = engine_path.encode('utf-8')
             py_load_engine.argtypes = [ctypes.c_ulonglong,ctypes.c_char_p]
-            self.lib.deserialize_load_trt(self.obj,engineName)
+            self.lib.deserialize_load_trt(self.obj,engineName,cudaDevice)
             
         else:
             #create optimized engine.       
@@ -65,11 +66,11 @@ class SsdMobilenet:
             precision = precision.encode('utf-8')
             py_create = self.lib.create_trt
             py_create.argtypes = [ctypes.c_ulonglong,ctypes.c_char_p,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p]
-            self.lib.create_trt(self.obj,uffName,engineName,batchsize,precision)
+            self.lib.create_trt(self.obj,uffName,engineName,batchsize,precision, cudaDevice)
             #load engine
             py_load_engine = self.lib.deserialize_load_trt
             py_load_engine.argtypes = [ctypes.c_ulonglong,ctypes.c_char_p]
-            self.lib.deserialize_load_trt(self.obj,engineName)      
+            self.lib.deserialize_load_trt(self.obj,engineName,cudaDevice)      
         
         
 

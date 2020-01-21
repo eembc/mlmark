@@ -1,93 +1,91 @@
-1
-MobilenetV1/MobilenetV1/Conv2d_8_pointwise/Relu6: 3d3e8912
-MobilenetV1/MobilenetV1/Conv2d_10_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 203): 3d418f1e
-(Unnamed ITensor* 9): 3de376b8
-(Unnamed ITensor* 173): 3d418f1e
-(Unnamed ITensor* 163): 3d418f1e
-(Unnamed ITensor* 162): 3d334c54
-MobilenetV1/MobilenetV1/Conv2d_7_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 153): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_3_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 152): 3d431cb5
-MobilenetV1/MobilenetV1/Conv2d_2_pointwise/Relu6: 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_7_depthwise/Relu6: 3d3d060c
-(Unnamed ITensor* 183): 3d418f1e
-(Unnamed ITensor* 101): 3d429814
-MobilenetV1/MobilenetV1/Conv2d_0/Relu6: 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_6_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 264): 3d418f1e
-(Unnamed ITensor* 112): 3d418f1e
-(Unnamed ITensor* 2): 3c0d35ba
-MobilenetV1/MobilenetV1/Conv2d_4_pointwise/Relu6: 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_3_depthwise/Relu6: 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_1_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 236): 3d418f1e
-(Unnamed ITensor* 60): 3d7ccb41
-MobilenetV1/MobilenetV1/Conv2d_2_depthwise/Relu6: 3d418f1e
-(Unnamed ITensor* 19): 3d17d1de
-(Unnamed ITensor* 142): 3d3c6a35
-(Unnamed ITensor* 233): 3d418f1e
-(Unnamed ITensor* 133): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_11_pointwise/Relu6: 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_11_depthwise/Relu6: 3d0d7efe
-(Unnamed ITensor* 172): 3d3ef659
-MobilenetV1/MobilenetV1/Conv2d_9_pointwise/Relu6: 3d310cde
-(Unnamed ITensor* 223): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_10_depthwise/Relu6: 3d12c993
-(Unnamed ITensor* 274): 3d418f1e
-(Unnamed ITensor* 232): 3d47c391
-MobilenetV1/MobilenetV1/Conv2d_12_depthwise/Relu6: 3cadf3e8
-(Unnamed ITensor* 273): 3dfb6359
-(Unnamed ITensor* 244): 3d418f1e
-(Unnamed ITensor* 81): 3d31a9f7
-(Unnamed ITensor* 61): 3d418f1e
-(Unnamed ITensor* 82): 3d418f1e
-(Unnamed ITensor* 193): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_4_depthwise/Relu6: 3d31060c
-(Unnamed ITensor* 111): 3d71ca54
-(Unnamed ITensor* 51): 3d418f1e
-(Unnamed ITensor* 70): 3dd845f5
-(Unnamed ITensor* 192): 3d310cde
-(Unnamed ITensor* 33): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_9_depthwise/Relu6: 3d23b367
-MobilenetV1/MobilenetV1/Conv2d_13_pointwise/Relu6: 3d418f1e
-MobilenetV1/Logits/AvgPool_1a/AvgPool: 3d418f1e
-(Unnamed ITensor* 263): 3c9db2bc
-(Unnamed ITensor* 71): 3d418f1e
-MobilenetV1/Predictions/Reshape: 3ddaff77
-MobilenetV1/Predictions/Softmax: 3a8e2d34
-(Unnamed ITensor* 115): 3d418f1e
-MobilenetV1/Predictions/Reshape_1: 3a8e2d34
-(Unnamed ITensor* 132): 3d9995ab
-(Unnamed ITensor* 253): 3d5c86b9
-(Unnamed ITensor* 143): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_12_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 74): 3d418f1e
-(Unnamed ITensor* 222): 3cfc384a
-MobilenetV1/Logits/SpatialSqueeze: 3ddaff77
-(Unnamed ITensor* 30): 3d418f1e
-(Unnamed ITensor* 122): 3d68a0bc
-(Unnamed ITensor* 92): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_8_depthwise/Relu6: 3d334a95
+TRT-6001-EntropyCalibration2
 input: 3c0d35ba
-(Unnamed ITensor* 20): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_1_depthwise/Relu6: 3d418f1e
-(Unnamed ITensor* 102): 3d418f1e
-(Unnamed ITensor* 29): 3e266573
-(Unnamed ITensor* 212): 3d9b5dc6
-(Unnamed ITensor* 40): 3e707c1d
-(Unnamed ITensor* 91): 3d821489
-MobilenetV1/MobilenetV1/Conv2d_5_depthwise/Relu6: 3d3d4e9d
-(Unnamed ITensor* 41): 3d418f1e
-(Unnamed ITensor* 50): 3da4af46
-(Unnamed ITensor* 202): 3d09879e
-(Unnamed ITensor* 213): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_5_pointwise/Relu6: 3d418f1e
-(Unnamed ITensor* 123): 3d418f1e
-(Unnamed ITensor* 182): 3cf96489
-(Unnamed ITensor* 243): 3cae5587
-(Unnamed ITensor* 254): 3d418f1e
-(Unnamed ITensor* 10): 3d418f1e
-MobilenetV1/MobilenetV1/Conv2d_13_depthwise/Relu6: 3c8c50a1
-MobilenetV1/MobilenetV1/Conv2d_6_depthwise/Relu6: 3d31dfbf
+MobilenetV1/MobilenetV1/Conv2d_0/Conv2D: 3d019a45
+MobilenetV1/MobilenetV1/Conv2d_0/BatchNorm/FusedBatchNorm: 3d63ee73
+MobilenetV1/MobilenetV1/Conv2d_0/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_1_depthwise/depthwise: 3f27e92b
+MobilenetV1/MobilenetV1/Conv2d_1_depthwise/BatchNorm/FusedBatchNorm: 3d17d1dd
+MobilenetV1/MobilenetV1/Conv2d_1_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_1_pointwise/Conv2D: 3dec5723
+MobilenetV1/MobilenetV1/Conv2d_1_pointwise/BatchNorm/FusedBatchNorm: 3e2d63fa
+MobilenetV1/MobilenetV1/Conv2d_1_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_2_depthwise/depthwise: 3ed3b1d0
+MobilenetV1/MobilenetV1/Conv2d_2_depthwise/BatchNorm/FusedBatchNorm: 3ddce520
+MobilenetV1/MobilenetV1/Conv2d_2_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_2_pointwise/Conv2D: 3dc459d3
+MobilenetV1/MobilenetV1/Conv2d_2_pointwise/BatchNorm/FusedBatchNorm: 3ddd3104
+MobilenetV1/MobilenetV1/Conv2d_2_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_3_depthwise/depthwise: 3e596bfb
+MobilenetV1/MobilenetV1/Conv2d_3_depthwise/BatchNorm/FusedBatchNorm: 3da7a54f
+MobilenetV1/MobilenetV1/Conv2d_3_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_3_pointwise/Conv2D: 3da6f9c3
+MobilenetV1/MobilenetV1/Conv2d_3_pointwise/BatchNorm/FusedBatchNorm: 3dcc4bb8
+MobilenetV1/MobilenetV1/Conv2d_3_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_4_depthwise/depthwise: 3e8f94e4
+MobilenetV1/MobilenetV1/Conv2d_4_depthwise/BatchNorm/FusedBatchNorm: 3dabd998
+MobilenetV1/MobilenetV1/Conv2d_4_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_4_pointwise/Conv2D: 3d895362
+MobilenetV1/MobilenetV1/Conv2d_4_pointwise/BatchNorm/FusedBatchNorm: 3d879e61
+MobilenetV1/MobilenetV1/Conv2d_4_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_5_depthwise/depthwise: 3df6ea89
+MobilenetV1/MobilenetV1/Conv2d_5_depthwise/BatchNorm/FusedBatchNorm: 3db64277
+MobilenetV1/MobilenetV1/Conv2d_5_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_5_pointwise/Conv2D: 3da5a089
+MobilenetV1/MobilenetV1/Conv2d_5_pointwise/BatchNorm/FusedBatchNorm: 3d6e0a28
+MobilenetV1/MobilenetV1/Conv2d_5_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_6_depthwise/depthwise: 3e40d02d
+MobilenetV1/MobilenetV1/Conv2d_6_depthwise/BatchNorm/FusedBatchNorm: 3d6e6e9e
+MobilenetV1/MobilenetV1/Conv2d_6_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_6_pointwise/Conv2D: 3d62875c
+MobilenetV1/MobilenetV1/Conv2d_6_pointwise/BatchNorm/FusedBatchNorm: 3d9995aa
+MobilenetV1/MobilenetV1/Conv2d_6_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_7_depthwise/depthwise: 3dc84c76
+MobilenetV1/MobilenetV1/Conv2d_7_depthwise/BatchNorm/FusedBatchNorm: 3d9d9999
+MobilenetV1/MobilenetV1/Conv2d_7_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_7_pointwise/Conv2D: 3dad126a
+MobilenetV1/MobilenetV1/Conv2d_7_pointwise/BatchNorm/FusedBatchNorm: 3d493f30
+MobilenetV1/MobilenetV1/Conv2d_7_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_8_depthwise/depthwise: 3d92208f
+MobilenetV1/MobilenetV1/Conv2d_8_depthwise/BatchNorm/FusedBatchNorm: 3d64cada
+MobilenetV1/MobilenetV1/Conv2d_8_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_8_pointwise/Conv2D: 3d566136
+MobilenetV1/MobilenetV1/Conv2d_8_pointwise/BatchNorm/FusedBatchNorm: 3d352741
+MobilenetV1/MobilenetV1/Conv2d_8_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_9_depthwise/depthwise: 3d8a2b9f
+MobilenetV1/MobilenetV1/Conv2d_9_depthwise/BatchNorm/FusedBatchNorm: 3d18dc7a
+MobilenetV1/MobilenetV1/Conv2d_9_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_9_pointwise/Conv2D: 3d217015
+MobilenetV1/MobilenetV1/Conv2d_9_pointwise/BatchNorm/FusedBatchNorm: 3d310d1f
+MobilenetV1/MobilenetV1/Conv2d_9_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_10_depthwise/depthwise: 3d79b0c9
+MobilenetV1/MobilenetV1/Conv2d_10_depthwise/BatchNorm/FusedBatchNorm: 3d1fce4c
+MobilenetV1/MobilenetV1/Conv2d_10_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_10_pointwise/Conv2D: 3d4f5fdf
+MobilenetV1/MobilenetV1/Conv2d_10_pointwise/BatchNorm/FusedBatchNorm: 3d973257
+MobilenetV1/MobilenetV1/Conv2d_10_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_11_depthwise/depthwise: 3d8bd74b
+MobilenetV1/MobilenetV1/Conv2d_11_depthwise/BatchNorm/FusedBatchNorm: 3d06ceda
+MobilenetV1/MobilenetV1/Conv2d_11_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_11_pointwise/Conv2D: 3d7061a3
+MobilenetV1/MobilenetV1/Conv2d_11_pointwise/BatchNorm/FusedBatchNorm: 3d5922f1
+MobilenetV1/MobilenetV1/Conv2d_11_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_12_depthwise/depthwise: 3d84ac00
+MobilenetV1/MobilenetV1/Conv2d_12_depthwise/BatchNorm/FusedBatchNorm: 3cae556a
+MobilenetV1/MobilenetV1/Conv2d_12_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_12_pointwise/Conv2D: 3d78bae9
+MobilenetV1/MobilenetV1/Conv2d_12_pointwise/BatchNorm/FusedBatchNorm: 3d89693e
+MobilenetV1/MobilenetV1/Conv2d_12_pointwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_13_depthwise/depthwise: 3d3ba722
+MobilenetV1/MobilenetV1/Conv2d_13_depthwise/BatchNorm/FusedBatchNorm: 3d1afafc
+MobilenetV1/MobilenetV1/Conv2d_13_depthwise/Relu6: 3d418306
+MobilenetV1/MobilenetV1/Conv2d_13_pointwise/Conv2D: 3ccdff70
+MobilenetV1/MobilenetV1/Conv2d_13_pointwise/BatchNorm/FusedBatchNorm: 3e1c7b3c
+MobilenetV1/MobilenetV1/Conv2d_13_pointwise/Relu6: 3d418306
+MobilenetV1/Logits/AvgPool_1a/AvgPool: 3d418f1e
+MobilenetV1/Logits/Conv2d_1c_1x1/Conv2D: 3de6af44
+MobilenetV1/Logits/SpatialSqueeze: 3ddaff7e
+(Unnamed Layer* 222) [Shuffle]_output: 3ddaff7e
+MobilenetV1/Predictions/Reshape: 3ddaff7e
+MobilenetV1/Predictions/Softmax: 3a8e2d38
+(Unnamed Layer* 225) [Shuffle]_output: 3a8e2d38
+MobilenetV1/Predictions/Reshape_1: 3a8e2d38

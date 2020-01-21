@@ -17,11 +17,22 @@
 #include "NvInfer.h"
 #include "NvInferPlugin.h"
 #include "NvUffParser.h"
+#include "warmup.h"
 
 #define CUDA(x) cudaCheckError((x), #x, __FILE__, __LINE__)
 #define DIMS_C(x) x.d[0]
 #define DIMS_H(x) x.d[1]
 #define DIMS_W(x) x.d[2]
+
+template <typename T>
+struct destroyer
+{
+    void operator()(T* t) { t->destroy(); }
+};
+
+template <typename T> using unique_ptr_destroy = std::unique_ptr<T, destroyer<T> >;
+
+
 
 #define CHECK(status)                                                          \
   do {                                                                         \
@@ -50,7 +61,7 @@ nvinfer1::plugin::DetectionOutputParameters detectionOutputParam{
     OUTPUT_CLS_SIZE,
     100,
     100,
-    0.5,
+    0.3,
     0.6,
     nvinfer1::plugin::CodeTypeSSD::TF_CENTER,
     {0, 2, 1},
@@ -113,7 +124,7 @@ public:
     mOutputConcatAxis = read<int>(d);
     mNumInputs = read<int>(d);
     CHECK(cudaMallocHost((void **)&mInputConcatAxis, mNumInputs * sizeof(int)));
-    CHECK(cudaMallocHost((void **)&mCopySize, mNumInputs * sizeof(int)));
+    CHECK(cudaMallocHost((void **)&mCopySize, mNumInputs * sizeof(size_t)));
 
     std::for_each(mInputConcatAxis, mInputConcatAxis + mNumInputs,
                   [&](int &inp) { inp = read<int>(d); });
@@ -162,7 +173,7 @@ public:
       mOutputConcatAxis += mInputConcatAxis[i];
     }
 
-    return nvinfer1::DimsCHW(mConcatAxisID == 1 ? mOutputConcatAxis : 1,
+    return nvinfer1::Dims3(mConcatAxisID == 1 ? mOutputConcatAxis : 1,
                              mConcatAxisID == 2 ? mOutputConcatAxis : 1,
                              mConcatAxisID == 3 ? mOutputConcatAxis : 1);
   }
@@ -237,7 +248,7 @@ public:
     assert(nbOutputs == 1);
     mCHW = inputs[0];
     assert(inputs[0].nbDims == 3);
-    CHECK(cudaMallocHost((void **)&mCopySize, nbInputs * sizeof(int)));
+    CHECK(cudaMallocHost((void **)&mCopySize, nbInputs * sizeof(size_t)));
     for (int i = 0; i < nbInputs; ++i) {
       mCopySize[i] =
           inputs[i].d[0] * inputs[i].d[1] * inputs[i].d[2] * sizeof(float);
@@ -287,97 +298,18 @@ private:
   std::string mNamespace;
 };
 
-namespace {
-const char *FLATTENCONCAT_PLUGIN_VERSION{"1"};
-const char *FLATTENCONCAT_PLUGIN_NAME{"FlattenConcat_TRT"};
-} // namespace
-
-class FlattenConcatPluginCreator : public nvinfer1::IPluginCreator {
-public:
-  FlattenConcatPluginCreator() {
-    mPluginAttributes.emplace_back(nvinfer1::PluginField(
-        "axis", nullptr, nvinfer1::PluginFieldType::kINT32, 1));
-    mPluginAttributes.emplace_back(nvinfer1::PluginField(
-        "ignoreBatch", nullptr, nvinfer1::PluginFieldType::kINT32, 1));
-
-    mFC.nbFields = mPluginAttributes.size();
-    mFC.fields = mPluginAttributes.data();
-  }
-
-  ~FlattenConcatPluginCreator() {}
-
-  const char *getPluginName() const override {
-    return FLATTENCONCAT_PLUGIN_NAME;
-  }
-
-  const char *getPluginVersion() const override {
-    return FLATTENCONCAT_PLUGIN_VERSION;
-  }
-
-  const nvinfer1::PluginFieldCollection *getFieldNames() override {
-    return &mFC;
-  }
-
-  nvinfer1::IPluginV2 *
-  createPlugin(const char *name,
-               const nvinfer1::PluginFieldCollection *fc) override {
-    const nvinfer1::PluginField *fields = fc->fields;
-    for (int i = 0; i < fc->nbFields; ++i) {
-      const char *attrName = fields[i].name;
-      if (!strcmp(attrName, "axis")) {
-        assert(fields[i].type == nvinfer1::PluginFieldType::kINT32);
-        mConcatAxisID = *(static_cast<const int *>(fields[i].data));
-      }
-      if (!strcmp(attrName, "ignoreBatch")) {
-        assert(fields[i].type == nvinfer1::PluginFieldType::kINT32);
-        mIgnoreBatch = *(static_cast<const bool *>(fields[i].data));
-      }
-    }
-
-    return new FlattenConcat(mConcatAxisID, mIgnoreBatch);
-  }
-
-  nvinfer1::IPluginV2 *deserializePlugin(const char *name,
-                                         const void *serialData,
-                                         size_t serialLength) override {
-
-    // This object will be deleted when the network is destroyed, which will
-    // call Concat::destroy()
-    return new FlattenConcat(serialData, serialLength);
-  }
-
-  void setPluginNamespace(const char *libNamespace) override {
-    mNamespace = libNamespace;
-  }
-
-  const char *getPluginNamespace() const override { return mNamespace.c_str(); }
-
-private:
-  static nvinfer1::PluginFieldCollection mFC;
-  bool mIgnoreBatch{false};
-  int mConcatAxisID;
-  static std::vector<nvinfer1::PluginField> mPluginAttributes;
-  std::string mNamespace = "";
-};
-
-nvinfer1::PluginFieldCollection FlattenConcatPluginCreator::mFC{};
-std::vector<nvinfer1::PluginField>
-    FlattenConcatPluginCreator::mPluginAttributes;
-
-REGISTER_TENSORRT_PLUGIN(FlattenConcatPluginCreator);
-
 class Logger : public nvinfer1::ILogger {
   void log(Severity severity, const char *msg) override {
-    if (severity != Severity::kINFO /*|| mEnableDebug*/) {
-      // printf("%s\n", msg);
-      // printf("%d\n", (int)severity);
+    if (severity <= Severity::kINFO /*|| mEnableDebug*/) {
+       // printf("%s\n", msg);
+       // printf("%d\n", (int)severity);
     }
   }
 } gLogger;
 
 struct outputLayer {
   std::string name;
-  nvinfer1::DimsCHW dims;
+  nvinfer1::Dims3 dims;
   uint32_t size;
   float *CPU;
   float *CUDA;
@@ -446,16 +378,17 @@ public:
 
   // Create an optimized network from uff model file.
   bool create_engine(const std::string &modelFile, const char *engine_name,
-                     int maxBatchSize, char *precision) {
+                     int maxBatchSize, char *precision, int cudaDevice, int DLACore = -1, bool fallback = true) {
 
+    cudaSetDevice(cudaDevice);
     // create API root class - must span the lifetime of the engine usage
-    nvinfer1::IBuilder *builder = nvinfer1::createInferBuilder(gLogger);
-    nvinfer1::INetworkDefinition *network = builder->createNetwork();
+    unique_ptr_destroy<nvinfer1::IBuilder> builder{ nvinfer1::createInferBuilder(gLogger) };
+    unique_ptr_destroy<nvinfer1::INetworkDefinition> network{ builder->createNetworkV2(0) };
+    unique_ptr_destroy<nvuffparser::IUffParser> parser{ nvuffparser::createUffParser() };
 
-    auto parser = nvuffparser::createUffParser();
 
     cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
+    cudaGetDeviceProperties(&prop, cudaDevice);
     std::string device_name(prop.name);
     std::string optimisation_precision(precision);
 
@@ -470,7 +403,7 @@ public:
                                          "CalibrationTable_ssdmobilenet");
 
     parser->registerInput(
-        "Input", nvinfer1::DimsCHW(3, 300, 300),
+        "Input", nvinfer1::Dims3(3, 300, 300),
         nvuffparser::UffInputOrder::kNCHW); // input for frozen_model.
     parser->registerOutput("MarkOutput_0");
 
@@ -492,15 +425,32 @@ public:
                 << network->getInput(i)->getName() << "\":  " << dims.d[0]
                 << "x" << dims.d[1] << "x" << dims.d[2] << std::endl;
     }
+
+    for (unsigned int i = 0, n = network->getNbInputs(); i < n; i++)
+    {
+        // Set formats and data types of inputs
+        auto input = network->getInput(i);
+        input->setType(DataType::kFLOAT);
+        input->setAllowedFormats(1U << static_cast<int>(TensorFormat::kLINEAR));
+    }
+
+    for (unsigned int i = 0, n = network->getNbOutputs(); i < n; i++)
+    {
+        // Set formats and data types of outputs
+        auto output = network->getOutput(i);
+        output->setType(DataType::kFLOAT);
+        output->setAllowedFormats(1U << static_cast<int>(TensorFormat::kLINEAR));
+    }
+
     // build the engine
+    unique_ptr_destroy<IBuilderConfig> config{builder->createBuilderConfig()};
     builder->setMaxBatchSize(maxBatchSize);
-    builder->setMaxWorkspaceSize(256 << 20);
+    config->setMaxWorkspaceSize(1UL << 32);
 
     if (optimisation_precision == "int8") {
-      if (device_name == "Xavier") {
-
-        builder->setInt8Mode(true);
-        builder->setInt8Calibrator(&calibrator);
+      if (builder->platformHasFastInt8()) {
+        config->setFlag(BuilderFlag::kINT8);
+        config->setInt8Calibrator(&calibrator);
       } else {
         printf("Selected device is:%s . This device does not support int8 "
                "optimization. Kindly use correct config file.\n\n",
@@ -508,22 +458,45 @@ public:
         exit(EXIT_FAILURE);
       }
     } else if (optimisation_precision == "fp16") {
-      builder->setFp16Mode(true);
+      config->setFlag(BuilderFlag::kFP16);
     } else if (optimisation_precision == "fp32") {
-      builder->setFp16Mode(false);
       // Dont do anything. Fp32 is default mode.
     }
-    builder->setDefaultDeviceType(nvinfer1::DeviceType::kGPU);
+    
+    if (DLACore == -1)
+    {
+      config->setDefaultDeviceType(nvinfer1::DeviceType::kGPU);
+    }
+    else
+    {
+        if (DLACore < builder->getNbDLACores())
+        {
+            config->setDefaultDeviceType(DeviceType::kDLA);
+            config->setDLACore(DLACore);
+            config->setFlag(BuilderFlag::kSTRICT_TYPES);
+
+            if (fallback)
+            {
+                config->setFlag(BuilderFlag::kGPU_FALLBACK);
+            }
+            if (optimisation_precision != "int8")
+            {
+                config->setFlag(BuilderFlag::kFP16);
+            }
+        }
+        else
+        {
+            printf("Cannot create DLA engine, %d not available\n", DLACore);
+            return false;
+        }
+    }
+    
 
     printf("initiated engine build for batchsize:%d. Wait few minutes for "
            "%s to build the optimized engine.\n",
            maxBatchSize, device_name.c_str());
-    nvinfer1::ICudaEngine *engine = builder->buildCudaEngine(*network);
+    nvinfer1::ICudaEngine *engine = builder->buildEngineWithConfig(*network, *config);
     printf("2/4. Engine built successfully\n");
-
-    // we don't need the network definition any more, and we can destroy the
-    // parser
-    network->destroy();
 
     // serialize the engine, then close everything down
     nvinfer1::IHostMemory *trtModelStream = engine->serialize();
@@ -545,15 +518,13 @@ public:
     outFile.close();
     printf("4/4. Engine file created successfully\n");
 
-    engine->destroy();
-    builder->destroy();
-
     return true;
   }
 
   // this function reads the optimized engine file and loads it in mEngine
   // variable.
-  bool deserialize_load_engine(const char *engine_name) {
+  bool deserialize_load_engine(const char *engine_name, int cudaDevice) {
+    cudaSetDevice(cudaDevice);
     std::stringstream gieModelStream;
     gieModelStream.seekg(0, gieModelStream.beg);
     std::string mCacheEnginePath(engine_name);
@@ -606,6 +577,7 @@ public:
     // requires exactly IEngine::getNbBindings(), of these, but in this case we
     // know that there is exactly 1 input and 2 output.
     int nbBindings = mEngine->getNbBindings();
+    const bool isOptimizedNMS = nbBindings == 2;
 
     std::vector<void *> buffers(nbBindings);
     std::vector<std::pair<int64_t, nvinfer1::DataType>> buffersSizes;
@@ -665,6 +637,9 @@ public:
         outputIndex0 = mEngine->getBindingIndex(OUTPUT_BLOB_NAME0),
         outputIndex1 =
             outputIndex0 + 1; // engine.getBindingIndex(OUTPUT_BLOB_NAME1);
+    const int output0_volume = 
+        volume(mEngine->getBindingDimensions(outputIndex0));
+    const int output0_bytes_size = batchsize * output0_volume * sizeof(float);
 
     cudaStream_t stream;
     CHECK(cudaStreamCreate(&stream));
@@ -685,20 +660,48 @@ public:
     auto t_end = std::chrono::high_resolution_clock::now();
     float total_time = std::chrono::duration<float>(t_end - t_start).count();
 
-    CHECK(cudaMemcpyAsync(detectionOut, buffers[outputIndex0],
-                          batchsize * detectionOutputParam.keepTopK * 7 *
-                              sizeof(float),
+    if (!isOptimizedNMS) {
+      CHECK(cudaMemcpyAsync(detectionOut, buffers[outputIndex0],
+                          output0_bytes_size,
                           cudaMemcpyDeviceToHost, stream));
-    CHECK(cudaMemcpyAsync(keepCount, buffers[outputIndex1],
+      CHECK(cudaMemcpyAsync(keepCount, buffers[outputIndex1],
                           batchsize * sizeof(int), cudaMemcpyDeviceToHost,
                           stream));
+    } else {
+      std::vector<float> output(batchsize * output0_volume);  
+      CHECK(cudaMemcpyAsync(&output[0], buffers[outputIndex0],
+                          output0_bytes_size,
+                          cudaMemcpyDeviceToHost, stream));
+      float* floatPtr = (float*)&output[0];
+      int* intPtr = (int*)&output[0] + detectionOutputParam.keepTopK*7;
+      for (int b = 0; b < batchsize; ++b){
+        for (int i =0; i < detectionOutputParam.keepTopK*7; i += 7) {
+          // detectionOut: [image_id, label, confidence, xmin, ymin, xmax, ymax]
+          // floatPtr:     [IMAGE_ID, YMIN, XMIN, YMAX, XMAX, CONFIDENCE, LABEL]
+          detectionOut[i + 0] = floatPtr[i + 0];
+          detectionOut[i + 1] = floatPtr[i + 6];
+          detectionOut[i + 2] = floatPtr[i + 5];
+          detectionOut[i + 3] = floatPtr[i + 2];
+          detectionOut[i + 4] = floatPtr[i + 1];
+          detectionOut[i + 5] = floatPtr[i + 4];
+          detectionOut[i + 6] = floatPtr[i + 3];
+        }
+        keepCount[b] = intPtr[0];
+
+        floatPtr += output0_volume;
+        intPtr += output0_volume;
+        detectionOut += detectionOutputParam.keepTopK*7;
+      }
+    }
     cudaStreamSynchronize(stream);
 
     // Release the stream and the buffers
     cudaStreamDestroy(stream);
     CHECK(cudaFree(buffers[inputIndex]));
     CHECK(cudaFree(buffers[outputIndex0]));
-    CHECK(cudaFree(buffers[outputIndex1]));
+    if (!isOptimizedNMS) { 
+      CHECK(cudaFree(buffers[outputIndex1])); 
+    }
 
     context->destroy();
 
@@ -714,19 +717,9 @@ public:
     // requires exactly IEngine::getNbBindings(), of these, but in this case we
     // know that there is exactly 1 input and 2 output.
     int nbBindings = mEngine->getNbBindings();
+    const bool isOptimizedNMS = nbBindings == 2;
 
-    std::vector<void *> buffers(nbBindings);
-    std::vector<std::pair<int64_t, nvinfer1::DataType>> buffersSizes;
-
-    // calculate Binding Buffer Sizes
-    for (int i = 0; i < nbBindings; ++i) {
-      nvinfer1::Dims dims = mEngine->getBindingDimensions(i);
-      nvinfer1::DataType dtype = mEngine->getBindingDataType(i);
-
-      int64_t eltCount = volume(dims) * batch_size;
-      buffersSizes.push_back(std::make_pair(eltCount, dtype));
-    }
-
+    
     // image data NHWC to NCHW converter
     int input_byte_size =
         batch_size * INPUT_C * INPUT_W * INPUT_H * sizeof(float);
@@ -759,13 +752,6 @@ public:
       }
     }
 
-    for (int i = 0; i < nbBindings; ++i) {
-      auto bufferSizesOutput = buffersSizes[i];
-      buffers[i] = safeCudaMalloc(
-          bufferSizesOutput.first *
-          getElementSize(bufferSizesOutput.second)); // sizeof float
-    }
-
     // In order to bind the buffers, we need to know the names of the input and
     // output tensors. Note that indices are guaranteed to be less than
     // IEngine::getNbBindings().
@@ -773,96 +759,49 @@ public:
         outputIndex0 = mEngine->getBindingIndex(OUTPUT_BLOB_NAME0),
         outputIndex1 =
             outputIndex0 + 1; // engine.getBindingIndex(OUTPUT_BLOB_NAME1);
+    const int output0_volume = volume(mEngine->getBindingDimensions(outputIndex0));
+    const int output0_bytes_size = batch_size * output0_volume * sizeof(float);
 
     cudaError_t rc = cudaSuccess;
     size_t bindings_number = nbBindings;
     std::vector<TensorRTStreamData> streams_data(max_requests_in_fly);
-    int i = 0;
 
     // this loop is to create/allocate memories in advance.
     for (auto &s : streams_data) // c++11 standard's range based for loop.
     {
       // printf("Stream %d created.\n",++i);
-      s.context = nullptr;
-      s.stream = nullptr;
-
-      s.host_buffers.resize(
-          bindings_number); // host buffer is a vector of type(void*).
-      std::fill(s.host_buffers.begin(), s.host_buffers.end(), nullptr);
-
+      // buffer is a vector of type(void*).
+      s.host_buffers.resize(bindings_number);
       s.device_buffers.resize(bindings_number);
-      std::fill(s.device_buffers.begin(), s.device_buffers.end(), nullptr);
 
-      rc = cudaMallocHost(&s.host_buffers[inputIndex],
-                          input_byte_size); // allocated memory on host.
+      for (int i = 0; i < nbBindings; ++i) {
+        nvinfer1::Dims dims = mEngine->getBindingDimensions(i);
+        nvinfer1::DataType dtype = mEngine->getBindingDataType(i);
+        size_t bufferSize = batch_size * volume(dims) * getElementSize(dtype);
+        
+        // Allocate memory on host.
+        rc = cudaMallocHost(&s.host_buffers[i], bufferSize); 
+        if (rc != cudaSuccess)
+          throw std::runtime_error("Allocation failed (Host): " +
+                                  std::string(cudaGetErrorName(rc)));
+        
+        // Allocate memory on device
+        rc = cudaMalloc(&s.device_buffers[i], bufferSize);
+        if (rc != cudaSuccess)
+          throw std::runtime_error("Allocation failed: (Device) " +
+                                  std::string(cudaGetErrorName(rc)));
+      }
 
+      s.context = mEngine->createExecutionContext();
+      if (!s.context)
+        throw std::runtime_error("Can't create context!");
+
+      rc = cudaStreamCreate(
+          &s.stream); // Creates a new asynchronous stream. s.stream is
+                      // pointer to new stream identifier.
       if (rc != cudaSuccess)
-        throw std::runtime_error("Allocation failed: " +
-                                 std::string(cudaGetErrorName(rc)));
-
-      if (!s.context) {
-        s.context = mEngine->createExecutionContext();
-        if (!s.context)
-          throw std::runtime_error("Can't create context!");
-
-        rc = cudaStreamCreate(
-            &s.stream); // Creates a new asynchronous stream. s.stream is
-                        // pointer to new stream identifier.
-        if (rc != cudaSuccess)
-          throw std::runtime_error("cudaStreamCreate: " +
-                                   std::string(cudaGetErrorName(rc)));
-      }
-
-      if (s.device_buffers.size() != mEngine->getNbBindings())
-        throw std::runtime_error("Wrong number of bindings: " +
-                                 std::to_string(mEngine->getNbBindings()));
-
-      // Allocate inputs memory on device
-      if (!s.device_buffers[inputIndex]) {
-        rc = cudaMalloc(&s.device_buffers[inputIndex], input_byte_size);
-        if (rc != cudaSuccess)
-          throw std::runtime_error("Allocation failed: " +
-                                   std::string(cudaGetErrorName(rc)));
-      }
-
-      // Allocate outputs memory on device for output index 0
-      if (!s.device_buffers[outputIndex0]) {
-        rc = cudaMalloc(&s.device_buffers[outputIndex0],
-                        batch_size * detectionOutputParam.keepTopK * 7 *
-                            sizeof(float));
-        if (rc != cudaSuccess)
-          throw std::runtime_error("Allocation failed: " +
-                                   std::string(cudaGetErrorName(rc)));
-      }
-
-      // Allocate outputs memory on device for output index 1
-      if (!s.device_buffers[outputIndex1]) {
-        rc = cudaMalloc(&s.device_buffers[outputIndex1],
-                        batch_size * sizeof(int));
-        if (rc != cudaSuccess)
-          throw std::runtime_error("Allocation failed: " +
-                                   std::string(cudaGetErrorName(rc)));
-      }
-
-      // Allocate outputs memory on host for output index 0
-      if (!s.host_buffers[outputIndex0]) {
-        rc = cudaMallocHost(&s.host_buffers[outputIndex0],
-                            batch_size * detectionOutputParam.keepTopK * 7 *
-                                sizeof(float));
-        if (rc != cudaSuccess)
-          throw std::runtime_error("Allocation failed: " +
-                                   std::string(cudaGetErrorName(rc)));
-      }
-
-      // Allocate outputs memory on host for output index 1
-      if (!s.host_buffers[outputIndex1]) {
-        rc = cudaMallocHost(&s.host_buffers[outputIndex1],
-                            batch_size * sizeof(int));
-        if (rc != cudaSuccess)
-          throw std::runtime_error("Allocation failed: " +
-                                   std::string(cudaGetErrorName(rc)));
-      }
-
+        throw std::runtime_error("cudaStreamCreate: " +
+                                  std::string(cudaGetErrorName(rc)));
       // Refill data on host
       rc = cudaMemcpyAsync(s.host_buffers[inputIndex], buf.data(),
                            input_byte_size, cudaMemcpyHostToHost, s.stream);
@@ -875,11 +814,11 @@ public:
     int synced_stream_id = -1;
     std::vector<std::chrono::high_resolution_clock::time_point> streamStart(
         streams_data.size());
-
+    checkWarmUp(streams_data[0].stream, 5000);
     // start timekeeping from this point.
     auto start = std::chrono::high_resolution_clock::now();
 
-    for (int i = 0; i < iterations; i++) {
+    for (int it = 0; it < iterations; it++) {
       queued_stream_id =
           (int)((queued_stream_id + 1) %
                 streams_data.size()); // this modulo operator makes sure that
@@ -899,7 +838,7 @@ public:
                                  std::string(cudaGetErrorName(rc)));
 
       // actual inference
-      
+
       streams_data.at(queued_stream_id)
           .context->enqueue(
               batch_size,
@@ -910,20 +849,20 @@ public:
       rc = cudaMemcpyAsync(
           streams_data.at(queued_stream_id).host_buffers[outputIndex0],
           streams_data.at(queued_stream_id).device_buffers[outputIndex0],
-          batch_size * detectionOutputParam.keepTopK * 7 * sizeof(float),
+          output0_bytes_size,
           cudaMemcpyDeviceToHost, streams_data.at(queued_stream_id).stream);
 
       // copy back data from device to host. index1
-      rc = cudaMemcpyAsync(
-          streams_data.at(queued_stream_id).host_buffers[outputIndex1],
-          streams_data.at(queued_stream_id).device_buffers[outputIndex1],
-          batch_size * sizeof(int), cudaMemcpyDeviceToHost,
-          streams_data.at(queued_stream_id).stream);
-
+      if (!isOptimizedNMS) {
+        rc = cudaMemcpyAsync(
+            streams_data.at(queued_stream_id).host_buffers[outputIndex1],
+            streams_data.at(queued_stream_id).device_buffers[outputIndex1],
+            batch_size * sizeof(int), cudaMemcpyDeviceToHost,
+            streams_data.at(queued_stream_id).stream);
+      }
       if (rc != cudaSuccess)
         throw std::runtime_error("DeviceToHost: " +
-                                 std::string(cudaGetErrorName(rc)));
-
+                                std::string(cudaGetErrorName(rc)));
       if (((synced_stream_id == queued_stream_id) ||
            ((synced_stream_id == -1) &&
             (((queued_stream_id + 1) % streams_data.size()) == 0)))) {
@@ -996,7 +935,7 @@ public:
         for (int i = 0; i < 100; i++) {
           float *det =
               ((float *)streams_data.at(0).host_buffers[outputIndex0]) +
-              (b * detectionOutputParam.keepTopK + i) * 7;
+              b * output0_volume + i * 7;
           out1 << det[1] << ";" << det[2] << ";" << det[3] << ";" << det[4]
                << ";" << det[5] << ";" << det[6] << std::endl;
         }
@@ -1016,17 +955,17 @@ extern "C" {
 SsdMobilenet *return_object() { return new SsdMobilenet(); }
 
 void create_trt(SsdMobilenet *obj, const char *uffName,
-                const char *engineFileName, int batchsize, char *precision) {
+                const char *engineFileName, int batchsize, char *precision, int cudaDevice) {
   bool k = false;
-  k = obj->create_engine(uffName, engineFileName, batchsize, precision);
+  k = obj->create_engine(uffName, engineFileName, batchsize, precision, cudaDevice);
   if (k == true) {
     printf("TensorRT engine file written successfully. \n");
   }
 }
 
-void deserialize_load_trt(SsdMobilenet *obj, const char *engine_name) {
+void deserialize_load_trt(SsdMobilenet *obj, const char *engine_name, int cudaDevice) {
   bool k = false;
-  k = obj->deserialize_load_engine(engine_name);
+  k = obj->deserialize_load_engine(engine_name, cudaDevice);
   if (k == true) {
     printf("TensorRT engine deserialized and loaded successfully. \n");
   }
@@ -1057,8 +996,10 @@ float doInference_trt(SsdMobilenet *obj, const char *image_name, float *data,
         // [image_id, label, confidence, xmin, ymin, xmax, ymax]
 
         if (det[2] > 0.3)
+        {
           out1 << det[1] << ";" << det[2] << ";" << det[3] << ";" << det[4]
                << ";" << det[5] << ";" << det[6] << std::endl;
+        }
       }
     }
     out1.close();

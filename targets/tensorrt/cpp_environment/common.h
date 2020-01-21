@@ -115,30 +115,6 @@ inline std::string locateFile(const std::string& filepathSuffix, const std::vect
     return filepath;
 }
 
-
-inline void enableDLA(IBuilder* b, int useDLACore)
-{
-    if (useDLACore >= 0)
-    {
-        const int nbDLACores = b->getNbDLACores();
-        if (nbDLACores <= 0)
-        {
-            std::cout << "ERROR: DLA not available on this platform. Option --useDLACore is not supported." << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        else if (useDLACore >= nbDLACores)
-        {
-            std::cout << "ERROR: Invalid DLA core requested: " << useDLACore << ". Valid range is 0 - " << nbDLACores-1 << "." << std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        b->allowGPUFallback(true);
-        b->setFp16Mode(true);
-        b->setDefaultDeviceType(DeviceType::kDLA);
-        b->setDLACore(useDLACore);
-    }
-}
-
 inline int parseDLA(int argc, char** argv)
 {
     for (int i = 1; i < argc; i++)
