@@ -67,7 +67,9 @@ The datasets used for this version of MLMark have copyright license requirements
 
 **ImageNet ILSVRC 2012**
 
-For ILSVRC 2012, visit [this link](http://www.image-net.org/challenges/LSVRC/2012/nonpub-downloads) and download the the "Validation Images", which is a 6.3GB archive. After uncompressing this archive, navigate to `mlmark/datasets/ILSVRC2012` and link (or copy) the dataset folder to `images`. The contents of `mlmark/datasets/ILSVRC2012/images` should now be all of the `.JPEG` files.
+~~For ILSVRC 2012, visit [this link](http://www.image-net.org/challenges/LSVRC/2012/nonpub-downloads) and download the the "Validation Images", which is a 6.3GB archive. After uncompressing this archive, navigate to `mlmark/datasets/ILSVRC2012` and link (or copy) the dataset folder to `images`. The contents of `mlmark/datasets/ILSVRC2012/images` should now be all of the `.JPEG` files.~~
+
+ILSVRC is only available by requesting access and agreeing to their terms. More information for obtaining ImageNet datasets can be found [here](https://www.image-net.org/download.php).
 
 TIP: To avoid duplicating the files and taking up drive space, it is preferrable to link to the files rather than copy them
 
